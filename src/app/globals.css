@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-outfit: 'Outfit', sans-serif;
+  --font-noto-serif-jp: 'Noto Serif JP', serif;
+
+  --background: 40 25% 98%;
+  --foreground: 0 0% 12%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 12%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 12%;
+
+  --primary: 6 68% 48%; /* Torii vermilion red #C8392B */
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 40 50% 55%; /* Kin / Warm Antique Gold #C5A059 */
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 36 20% 92%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 6 68% 95%;
+  --accent-foreground: 6 68% 45%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 36 15% 88%;
+  --input: 36 15% 88%;
+  --ring: 6 68% 48%;
+
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 0 0% 8%; /* Sumi black #141414 */
+  --foreground: 40 25% 95%;
+
+  --card: 0 0% 12%;
+  --card-foreground: 40 25% 95%;
+
+  --popover: 0 0% 12%;
+  --popover-foreground: 40 25% 95%;
+
+  --primary: 6 75% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 40 50% 55%;
+  --secondary-foreground: 0 0% 10%;
+
+  --muted: 0 0% 18%;
+  --muted-foreground: 0 0% 65%;
+
+  --accent: 0 0% 20%;
+  --accent-foreground: 40 25% 95%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 6 75% 55%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-outfit), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle Japanese Seigaiha / Asanoha geometric overlay */
+.bg-japanese-pattern {
+  background-color: #faf7f2;
+  background-image: radial-gradient(#d35445 0.5px, transparent 0.5px), radial-gradient(#d35445 0.5px, #faf7f2 0.5px);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+  background-opacity: 0.05;
+}
+
+.dark .bg-japanese-pattern {
+  background-color: #0f0f11;
+  background-image: radial-gradient(#c5a059 0.4px, transparent 0.4px);
+  background-size: 24px 24px;
+}
+
+/* Glassmorphism accents */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(220, 210, 195, 0.4);
+}
+
+.dark .glass-panel {
+  background: rgba(20, 20, 24, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Elegant scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 150, 140, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 150, 140, 0.5);
+}
