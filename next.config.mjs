@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    serverComponentsExternalPackages: ['@node-rs/argon2', 'mongoose'],
+    serverComponentsExternalPackages: ['@node-rs/argon2'],
   },
   images: {
     remotePatterns: [

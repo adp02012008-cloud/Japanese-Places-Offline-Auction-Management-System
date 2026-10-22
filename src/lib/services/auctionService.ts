@@ -1,9 +1,4 @@
-import mongoose from 'mongoose';
-import connectToDatabase from '@/lib/db/mongodb';
-import Place from '@/models/Place';
-import Team from '@/models/Team';
-import Purchase from '@/models/Purchase';
-import AuditLog from '@/models/AuditLog';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export interface ConfirmSaleParams {
   placeId: string;
@@ -22,9 +17,8 @@ export interface CancelSaleParams {
 }
 
 /**
- * Confirms an offline sale atomically.
- * Updates Place, Team, creates Purchase record, and adds AuditLog.
- * Aborts cleanly on any failure or validation error.
+ * Confirms an offline sale in Supabase.
+ * Checks availability, budget adequacy, records purchase, updates landmark, and logs audit trail.
  */
 export async function confirmOfflineSale({
   placeId,
@@ -34,166 +28,157 @@ export async function confirmOfflineSale({
   adminUsername,
   notes = '',
 }: ConfirmSaleParams) {
-  await connectToDatabase();
+  const supabase = getSupabaseAdmin();
 
   if (typeof finalPurchasePrice !== 'number' || finalPurchasePrice < 0 || isNaN(finalPurchasePrice)) {
     throw new Error('Invalid purchase price. Amount must be a non-negative number.');
   }
 
-  const db = mongoose.connection;
-  let session: mongoose.ClientSession | null = null;
-  let useTransaction = false;
+  // 1. Fetch place
+  const { data: place, error: placeError } = await supabase
+    .from('places')
+    .select('*')
+    .eq('id', placeId)
+    .single();
 
-  try {
-    session = await db.startSession();
-    // Check if replica set supports transactions
-    useTransaction = true;
-    session.startTransaction();
-  } catch (err) {
-    // If running on a standalone mongo without replica set (e.g. dev), fallback to atomic updates
-    useTransaction = false;
-    session = null;
+  if (placeError || !place) {
+    throw new Error(`Japanese place with ID "${placeId}" does not exist.`);
   }
 
-  try {
-    // 1. Verify place exists & is available
-    const placeQuery = Place.findById(placeId);
-    if (session) placeQuery.session(session);
-    const place = await placeQuery;
-
-    if (!place) {
-      throw new Error(`Japanese place with ID "${placeId}" does not exist.`);
-    }
-
-    if (place.status === 'SOLD') {
-      throw new Error(`Place "${place.placeName}" has already been sold and cannot be re-purchased.`);
-    }
-
-    if (place.status === 'WITHDRAWN') {
-      throw new Error(`Place "${place.placeName}" is currently withdrawn from the auction.`);
-    }
-
-    // 2. Verify winning team exists & is eligible
-    const teamQuery = Team.findById(teamId);
-    if (session) teamQuery.session(session);
-    const team = await teamQuery;
-
-    if (!team) {
-      throw new Error(`Team with ID "${teamId}" does not exist.`);
-    }
-
-    if (team.approvalStatus !== 'APPROVED') {
-      throw new Error(`Team "${team.teamName}" is not approved for participation.`);
-    }
-
-    if (team.participationStatus !== 'ACTIVE') {
-      throw new Error(`Team "${team.teamName}" is marked as inactive.`);
-    }
-
-    // 3. Verify sufficient remaining budget
-    if (team.remainingBudget < finalPurchasePrice) {
-      throw new Error(
-        `Insufficient budget! Team "${team.teamName}" has remaining balance of ${team.remainingBudget}, but purchase price is ${finalPurchasePrice}.`
-      );
-    }
-
-    // 4. Create confirmed purchase record
-    const purchaseDocs = await Purchase.create(
-      [
-        {
-          placeId: place._id,
-          placeName: place.placeName,
-          teamId: team._id,
-          teamName: team.teamName,
-          finalPurchasePrice,
-          actualWorthAtSale: place.actualWorth,
-          status: 'CONFIRMED',
-          confirmedAt: new Date(),
-          adminId,
-          adminUsername,
-          notes,
-        },
-      ],
-      session ? { session } : {}
-    );
-    const purchase = purchaseDocs[0];
-
-    // 5. Update Place state
-    place.status = 'SOLD';
-    place.winningTeamId = team._id as mongoose.Types.ObjectId;
-    place.winningTeamName = team.teamName;
-    place.finalPurchasePrice = finalPurchasePrice;
-    place.soldAt = new Date();
-    await place.save(session ? { session } : undefined);
-
-    // 6. Update Team budget & acquired totals
-    team.remainingBudget = Math.max(0, team.remainingBudget - finalPurchasePrice);
-    team.totalSpent = team.totalSpent + finalPurchasePrice;
-    team.totalActualWorth = team.totalActualWorth + place.actualWorth;
-    await team.save(session ? { session } : undefined);
-
-    // 7. Audit log creation
-    await AuditLog.create(
-      [
-        {
-          adminId,
-          adminUsername,
-          actionType: 'SALE_CONFIRMATION',
-          affectedRecordType: 'Purchase',
-          affectedRecordId: purchase._id.toString(),
-          beforeValue: {
-            placeStatus: 'NOT_SOLD',
-            teamRemainingBudget: team.remainingBudget + finalPurchasePrice,
-            teamTotalSpent: team.totalSpent - finalPurchasePrice,
-          },
-          afterValue: {
-            placeStatus: 'SOLD',
-            finalPurchasePrice,
-            winningTeamId: team._id.toString(),
-            teamRemainingBudget: team.remainingBudget,
-            teamTotalSpent: team.totalSpent,
-          },
-          reason: `Offline auction sale confirmed for place: ${place.placeName}`,
-          timestamp: new Date(),
-        },
-      ],
-      session ? { session } : {}
-    );
-
-    // Commit transaction if active
-    if (session && useTransaction) {
-      await session.commitTransaction();
-    }
-
-    return {
-      success: true,
-      purchaseId: purchase._id.toString(),
-      place: {
-        _id: place._id.toString(),
-        placeName: place.placeName,
-        status: place.status,
-      },
-      team: {
-        _id: team._id.toString(),
-        teamName: team.teamName,
-        remainingBudget: team.remainingBudget,
-        totalSpent: team.totalSpent,
-      },
-    };
-  } catch (err) {
-    if (session && useTransaction) {
-      await session.abortTransaction();
-    }
-    throw err;
-  } finally {
-    if (session) {
-      session.endSession();
-    }
+  if (place.status === 'SOLD') {
+    throw new Error(`Place "${place.place_name}" has already been sold and cannot be re-purchased.`);
   }
+
+  if (place.status === 'WITHDRAWN') {
+    throw new Error(`Place "${place.place_name}" is currently withdrawn from the auction.`);
+  }
+
+  // 2. Fetch winning team
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', teamId)
+    .single();
+
+  if (teamError || !team) {
+    throw new Error(`Team with ID "${teamId}" does not exist.`);
+  }
+
+  if (team.approval_status !== 'APPROVED') {
+    throw new Error(`Team "${team.team_name}" is not approved for participation.`);
+  }
+
+  if (team.participation_status !== 'ACTIVE') {
+    throw new Error(`Team "${team.team_name}" is marked as inactive.`);
+  }
+
+  // 3. Verify sufficient budget
+  const remainingBudget = Number(team.remaining_budget);
+  if (remainingBudget < finalPurchasePrice) {
+    throw new Error(
+      `Insufficient budget! Team "${team.team_name}" has remaining balance of ${remainingBudget}, but purchase price is ${finalPurchasePrice}.`
+    );
+  }
+
+  // 4. Create confirmed purchase record
+  const { data: purchase, error: purchaseError } = await supabase
+    .from('purchases')
+    .insert({
+      place_id: place.id,
+      place_name: place.place_name,
+      team_id: team.id,
+      team_name: team.team_name,
+      final_purchase_price: finalPurchasePrice,
+      actual_worth_at_sale: place.actual_worth,
+      status: 'CONFIRMED',
+      confirmed_at: new Date().toISOString(),
+      admin_id: adminId,
+      admin_username: adminUsername,
+      notes,
+    })
+    .select()
+    .single();
+
+  if (purchaseError || !purchase) {
+    throw new Error(`Failed to record purchase: ${purchaseError?.message || 'Database error'}`);
+  }
+
+  // 5. Update Place state
+  const { error: updatePlaceError } = await supabase
+    .from('places')
+    .update({
+      status: 'SOLD',
+      winning_team_id: team.id,
+      winning_team_name: team.team_name,
+      final_purchase_price: finalPurchasePrice,
+      sold_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', place.id);
+
+  if (updatePlaceError) {
+    // Rollback purchase record if place update fails
+    await supabase.from('purchases').delete().eq('id', purchase.id);
+    throw new Error(`Failed to update place status: ${updatePlaceError.message}`);
+  }
+
+  // 6. Update Team budget & totals
+  const newRemaining = Math.max(0, remainingBudget - finalPurchasePrice);
+  const newSpent = Number(team.total_spent) + finalPurchasePrice;
+  const newWorth = Number(team.total_actual_worth) + Number(place.actual_worth);
+
+  await supabase
+    .from('teams')
+    .update({
+      remaining_budget: newRemaining,
+      total_spent: newSpent,
+      total_actual_worth: newWorth,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', team.id);
+
+  // 7. Audit log creation
+  await supabase.from('audit_logs').insert({
+    admin_id: adminId,
+    admin_username: adminUsername,
+    action_type: 'SALE_CONFIRMATION',
+    affected_record_type: 'Purchase',
+    affected_record_id: purchase.id,
+    before_value: {
+      place_status: 'NOT_SOLD',
+      team_remaining_budget: remainingBudget,
+      team_total_spent: team.total_spent,
+    },
+    after_value: {
+      place_status: 'SOLD',
+      final_purchase_price: finalPurchasePrice,
+      winning_team_id: team.id,
+      team_remaining_budget: newRemaining,
+      team_total_spent: newSpent,
+    },
+    reason: `Offline auction sale confirmed for place: ${place.place_name}`,
+    timestamp: new Date().toISOString(),
+  });
+
+  return {
+    success: true,
+    purchaseId: purchase.id,
+    place: {
+      _id: place.id,
+      placeName: place.place_name,
+      status: 'SOLD',
+    },
+    team: {
+      _id: team.id,
+      teamName: team.team_name,
+      remainingBudget: newRemaining,
+      totalSpent: newSpent,
+    },
+  };
 }
 
 /**
- * Cancels a previously confirmed sale and restores Place & Team budget.
+ * Cancels a previously confirmed sale and restores landmark & team budget in Supabase.
  */
 export async function cancelSale({
   purchaseId,
@@ -201,100 +186,77 @@ export async function cancelSale({
   adminUsername,
   reason,
 }: CancelSaleParams) {
-  await connectToDatabase();
+  const supabase = getSupabaseAdmin();
 
-  const db = mongoose.connection;
-  let session: mongoose.ClientSession | null = null;
-  let useTransaction = false;
+  const { data: purchase, error: purchaseError } = await supabase
+    .from('purchases')
+    .select('*')
+    .eq('id', purchaseId)
+    .single();
 
-  try {
-    session = await db.startSession();
-    useTransaction = true;
-    session.startTransaction();
-  } catch (err) {
-    useTransaction = false;
-    session = null;
+  if (purchaseError || !purchase) {
+    throw new Error(`Purchase record "${purchaseId}" not found.`);
   }
 
-  try {
-    const purchaseQuery = Purchase.findById(purchaseId);
-    if (session) purchaseQuery.session(session);
-    const purchase = await purchaseQuery;
-
-    if (!purchase) {
-      throw new Error(`Purchase record "${purchaseId}" not found.`);
-    }
-
-    if (purchase.status === 'CANCELLED') {
-      throw new Error(`Purchase is already cancelled.`);
-    }
-
-    // Find place
-    const placeQuery = Place.findById(purchase.placeId);
-    if (session) placeQuery.session(session);
-    const place = await placeQuery;
-
-    // Find team
-    const teamQuery = Team.findById(purchase.teamId);
-    if (session) teamQuery.session(session);
-    const team = await teamQuery;
-
-    // Mark purchase cancelled
-    purchase.status = 'CANCELLED';
-    purchase.cancellationReason = reason;
-    purchase.cancelledAt = new Date();
-    purchase.cancelledBy = adminUsername;
-    await purchase.save(session ? { session } : undefined);
-
-    // Restore place if it is still associated
-    if (place) {
-      place.status = 'NOT_SOLD';
-      place.winningTeamId = undefined;
-      place.winningTeamName = '';
-      place.finalPurchasePrice = undefined;
-      place.soldAt = undefined;
-      await place.save(session ? { session } : undefined);
-    }
-
-    // Restore team budget
-    if (team) {
-      team.remainingBudget = team.remainingBudget + purchase.finalPurchasePrice;
-      team.totalSpent = Math.max(0, team.totalSpent - purchase.finalPurchasePrice);
-      team.totalActualWorth = Math.max(0, team.totalActualWorth - purchase.actualWorthAtSale);
-      await team.save(session ? { session } : undefined);
-    }
-
-    // Audit log
-    await AuditLog.create(
-      [
-        {
-          adminId,
-          adminUsername,
-          actionType: 'SALE_CANCELLATION',
-          affectedRecordType: 'Purchase',
-          affectedRecordId: purchase._id.toString(),
-          beforeValue: { status: 'CONFIRMED', price: purchase.finalPurchasePrice },
-          afterValue: { status: 'CANCELLED', reason },
-          reason: `Sale cancelled: ${reason}`,
-          timestamp: new Date(),
-        },
-      ],
-      session ? { session } : {}
-    );
-
-    if (session && useTransaction) {
-      await session.commitTransaction();
-    }
-
-    return { success: true };
-  } catch (err) {
-    if (session && useTransaction) {
-      await session.abortTransaction();
-    }
-    throw err;
-  } finally {
-    if (session) {
-      session.endSession();
-    }
+  if (purchase.status === 'CANCELLED') {
+    throw new Error(`Purchase is already cancelled.`);
   }
+
+  // Mark purchase cancelled
+  await supabase
+    .from('purchases')
+    .update({
+      status: 'CANCELLED',
+      cancellation_reason: reason,
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: adminUsername,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', purchase.id);
+
+  // Restore place
+  await supabase
+    .from('places')
+    .update({
+      status: 'NOT_SOLD',
+      winning_team_id: null,
+      winning_team_name: '',
+      final_purchase_price: null,
+      sold_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', purchase.place_id);
+
+  // Restore team budget
+  const { data: team } = await supabase.from('teams').select('*').eq('id', purchase.team_id).single();
+  if (team) {
+    const restoredRemaining = Number(team.remaining_budget) + Number(purchase.final_purchase_price);
+    const restoredSpent = Math.max(0, Number(team.total_spent) - Number(purchase.final_purchase_price));
+    const restoredWorth = Math.max(0, Number(team.total_actual_worth) - Number(purchase.actual_worth_at_sale));
+
+    await supabase
+      .from('teams')
+      .update({
+        remaining_budget: restoredRemaining,
+        total_spent: restoredSpent,
+        total_actual_worth: restoredWorth,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', team.id);
+  }
+
+  // Audit log
+  await supabase.from('audit_logs').insert({
+    admin_id: adminId,
+    admin_username: adminUsername,
+    action_type: 'SALE_CANCELLATION',
+    affected_record_type: 'Purchase',
+    affected_record_id: purchase.id,
+    before_value: { status: 'CONFIRMED', price: purchase.final_purchase_price },
+    after_value: { status: 'CANCELLED', reason },
+    reason: `Sale cancelled: ${reason}`,
+    timestamp: new Date().toISOString(),
+  });
+
+  return { success: true };
 }

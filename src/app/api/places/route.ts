@@ -1,34 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import Place from '@/models/Place';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 /**
  * Public and Team catalogue endpoint.
- * STRICT PRIVACY REQUIREMENT: Confidential actualWorth is NEVER returned.
+ * STRICT PRIVACY REQUIREMENT: Confidential actual_worth is NEVER selected or returned.
  */
 export async function GET(req: NextRequest) {
   try {
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || '';
     const search = searchParams.get('search') || '';
 
-    const filter: Record<string, any> = {};
+    // STRICT PROJECTION: Explicitly exclude actual_worth!
+    let query = supabase
+      .from('places')
+      .select('id, place_name, description, image_url, image_storage_path, starting_price, status, winning_team_id, winning_team_name, final_purchase_price, sold_at')
+      .order('place_name', { ascending: true });
+
     if (status && status !== 'ALL') {
-      filter.status = status;
+      query = query.eq('status', status);
     }
     if (search) {
-      filter.placeName = { $regex: search, $options: 'i' };
+      query = query.ilike('place_name', `%${search}%`);
     }
 
-    // STRICT PROJECTION: Explicitly exclude actualWorth!
-    const places = await Place.find(filter)
-      .select('-actualWorth')
-      .sort({ placeName: 1 })
-      .lean();
+    const { data: places, error } = await query;
+    if (error) throw error;
 
-    return NextResponse.json({ success: true, places });
+    const mapped = (places || []).map((p) => ({
+      _id: String(p.id),
+      placeName: p.place_name,
+      description: p.description,
+      imageUrl: p.image_url,
+      imageStoragePath: p.image_storage_path,
+      startingPrice: Number(p.starting_price),
+      status: p.status,
+      winningTeamId: p.winning_team_id ? String(p.winning_team_id) : undefined,
+      winningTeamName: p.winning_team_name,
+      finalPurchasePrice: p.final_purchase_price ? Number(p.final_purchase_price) : undefined,
+      soldAt: p.sold_at,
+    }));
+
+    return NextResponse.json({ success: true, places: mapped });
   } catch (err) {
     console.error('Error fetching catalogue places:', err);
     return NextResponse.json({ error: 'Failed to load Japanese places catalogue.' }, { status: 500 });

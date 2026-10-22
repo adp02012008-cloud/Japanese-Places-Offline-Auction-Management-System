@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import Admin from '@/models/Admin';
-import Team from '@/models/Team';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { verifyPassword, hashPassword, createSessionToken, setSessionCookie } from '@/lib/auth/session';
 import { AuthSession } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
     const body = await req.json();
     const { username, password, type } = body;
 
@@ -17,50 +15,59 @@ export async function POST(req: NextRequest) {
 
     const cleanUsername = String(username).trim().toLowerCase();
 
-    // Check if initial admin needs creation
-    const adminCount = await Admin.countDocuments();
-    if (adminCount === 0) {
+    // 1. Check/initialize admin account if table is empty
+    const { count } = await supabase.from('admins').select('*', { count: 'exact', head: true });
+    if (!count || count === 0) {
       const defaultUser = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
       const defaultPass = process.env.ADMIN_PASSWORD || 'Admin@Sakura2026!';
       const defaultHash = await hashPassword(defaultPass);
-      await Admin.create({
+      await supabase.from('admins').insert({
         username: defaultUser,
-        passwordHash: defaultHash,
+        password_hash: defaultHash,
         role: 'ADMIN',
       });
     }
 
-    // 1. Check Admin login
+    // 2. Check Admin login
     if (type === 'admin' || !type) {
-      const admin = await Admin.findOne({ username: cleanUsername }).select('+passwordHash');
-      if (admin) {
-        const isMatch = await verifyPassword(password, admin.passwordHash);
+      const { data: admin } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('username', cleanUsername)
+        .single();
+
+      if (admin && admin.password_hash) {
+        const isMatch = await verifyPassword(password, admin.password_hash);
         if (isMatch) {
-          admin.lastLogin = new Date();
-          await admin.save();
+          await supabase
+            .from('admins')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', admin.id);
 
           const sessionPayload: AuthSession = {
-            userId: admin._id.toString(),
+            userId: String(admin.id),
             username: admin.username,
             role: 'ADMIN',
           };
           const token = await createSessionToken(sessionPayload);
           setSessionCookie(token);
 
-          return NextResponse.json({
-            success: true,
-            user: sessionPayload,
-          });
+          return NextResponse.json({ success: true, user: sessionPayload });
         }
       }
     }
 
-    // 2. Check Team login
-    const team = await Team.findOne({ username: cleanUsername }).select('+passwordHash');
-    if (team && team.passwordHash) {
-      const isMatch = await verifyPassword(password, team.passwordHash);
+    // 3. Check Team login
+    const { data: team } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('username', cleanUsername)
+      .single();
+
+    if (team && team.password_hash) {
+      const isMatch = await verifyPassword(password, team.password_hash);
       if (isMatch) {
-        if (team.participationStatus !== 'ACTIVE') {
+        if (team.participation_status !== 'ACTIVE') {
           return NextResponse.json(
             { error: 'Team participation is currently disabled.' },
             { status: 403 }
@@ -68,19 +75,16 @@ export async function POST(req: NextRequest) {
         }
 
         const sessionPayload: AuthSession = {
-          userId: team._id.toString(),
+          userId: String(team.id),
           username: team.username,
           role: 'TEAM',
-          teamId: team._id.toString(),
-          teamName: team.teamName,
+          teamId: String(team.id),
+          teamName: team.team_name,
         };
         const token = await createSessionToken(sessionPayload);
         setSessionCookie(token);
 
-        return NextResponse.json({
-          success: true,
-          user: sessionPayload,
-        });
+        return NextResponse.json({ success: true, user: sessionPayload });
       }
     }
 

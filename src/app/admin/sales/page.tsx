@@ -424,7 +424,7 @@ export default function AdminSalesPage() {
 
           <div className="rounded-lg bg-sumi-950 p-3 text-[11px] text-sumi-400 space-y-1">
             <div className="text-kiniro-400 font-semibold">Atomic Consistency:</div>
-            <div>All changes execute inside a single MongoDB session. If budget verification fails, zero data is altered.</div>
+            <div>All changes execute securely against Supabase. If budget verification fails, zero data is altered.</div>
           </div>
         </Card>
       </div>

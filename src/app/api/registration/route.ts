@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import Team from '@/models/Team';
-import TeamMember from '@/models/TeamMember';
-import EventSettings from '@/models/EventSettings';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { hashPassword } from '@/lib/auth/session';
 import { generateTeamUsername } from '@/lib/utils';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
     const body = await req.json();
     const { teamName, memberCount, members } = body;
 
     // 1. Check if event registration is open
-    const settings = await EventSettings.findOne().lean();
-    if (settings && settings.isRegistrationOpen === false) {
+    const { data: settings } = await supabase.from('event_settings').select('*').limit(1).single();
+
+    if (settings && settings.is_registration_open === false) {
       return NextResponse.json(
         { error: 'Team registration is currently closed by the event administrator.' },
         { status: 403 }
       );
     }
 
-    const startingBudget = settings?.startingBudgetPerTeam ?? 100000;
-    const requireApproval = settings?.requireAdminApproval ?? true;
+    const startingBudget = Number(settings?.starting_budget_per_team ?? 100000);
+    const requireApproval = settings?.require_admin_approval ?? true;
 
     // 2. Validate team fields
     if (!teamName || typeof teamName !== 'string' || teamName.trim().length < 2) {
@@ -51,9 +49,12 @@ export async function POST(req: NextRequest) {
     const trimmedTeamName = teamName.trim();
 
     // 3. Case-insensitive duplicate team name check
-    const existingTeam = await Team.findOne({
-      teamName: { $regex: new RegExp(`^${trimmedTeamName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-    });
+    const { data: existingTeam } = await supabase
+      .from('teams')
+      .select('id')
+      .ilike('team_name', trimmedTeamName)
+      .maybeSingle();
+
     if (existingTeam) {
       return NextResponse.json(
         { error: `The team name "${trimmedTeamName}" is already taken. Please choose another name.` },
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       const cleanEnroll = m.enrollmentNumber.trim().toUpperCase();
       if (submissionEnrollments.has(cleanEnroll)) {
         return NextResponse.json(
-          { error: `Duplicate enrollment number "${cleanEnroll}" found within the team submission.` },
+          { error: `Duplicate enrollment number "${cleanEnroll}" entered for multiple members.` },
           { status: 400 }
         );
       }
@@ -96,14 +97,16 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Global duplicate enrollment check across database
-    const existingMember = await TeamMember.findOne({
-      enrollmentNumber: { $in: Array.from(submissionEnrollments) },
-    }).lean();
+    const { data: existingMembers } = await supabase
+      .from('team_members')
+      .select('enrollment_number')
+      .in('enrollment_number', Array.from(submissionEnrollments))
+      .limit(1);
 
-    if (existingMember) {
+    if (existingMembers && existingMembers.length > 0) {
       return NextResponse.json(
         {
-          error: `Enrollment number "${existingMember.enrollmentNumber}" is already registered by another team in this event.`,
+          error: `Enrollment number "${existingMembers[0].enrollment_number}" is already registered by another team in this event.`,
         },
         { status: 409 }
       );
@@ -114,34 +117,47 @@ export async function POST(req: NextRequest) {
     const tempPassword = 'Team@' + crypto.randomBytes(3).toString('hex').toUpperCase();
     const passwordHash = await hashPassword(tempPassword);
 
-    // 7. Save Team document
-    const newTeam = await Team.create({
-      teamName: trimmedTeamName,
-      memberCount: parsedCount,
-      approvalStatus: requireApproval ? 'PENDING' : 'APPROVED',
-      participationStatus: 'ACTIVE',
-      startingBudget,
-      remainingBudget: startingBudget,
-      totalSpent: 0,
-      totalActualWorth: 0,
-      username: generatedUsername,
-      passwordHash,
-      firstLoginMustChangePassword: true,
-    });
+    // 7. Save Team document in Supabase
+    const { data: newTeam, error: teamError } = await supabase
+      .from('teams')
+      .insert({
+        team_name: trimmedTeamName,
+        member_count: parsedCount,
+        approval_status: requireApproval ? 'PENDING' : 'APPROVED',
+        participation_status: 'ACTIVE',
+        starting_budget: startingBudget,
+        remaining_budget: startingBudget,
+        total_spent: 0,
+        total_actual_worth: 0,
+        username: generatedUsername,
+        password_hash: passwordHash,
+        first_login_must_change_password: true,
+      })
+      .select()
+      .single();
+
+    if (teamError || !newTeam) {
+      throw new Error(`Failed to create team: ${teamError?.message}`);
+    }
 
     // 8. Save Team Members
-    const memberDocs = cleanMembers.map((m) => ({
-      teamId: newTeam._id,
-      fullName: m.fullName,
-      enrollmentNumber: m.enrollmentNumber,
+    const memberRows = cleanMembers.map((m) => ({
+      team_id: newTeam.id,
+      full_name: m.fullName,
+      enrollment_number: m.enrollmentNumber,
     }));
-    await TeamMember.insertMany(memberDocs);
+
+    const { error: membersError } = await supabase.from('team_members').insert(memberRows);
+    if (membersError) {
+      await supabase.from('teams').delete().eq('id', newTeam.id);
+      throw new Error(`Failed to save members: ${membersError.message}`);
+    }
 
     return NextResponse.json({
       success: true,
-      teamId: newTeam._id.toString(),
-      teamName: newTeam.teamName,
-      approvalStatus: newTeam.approvalStatus,
+      teamId: String(newTeam.id),
+      teamName: newTeam.team_name,
+      approvalStatus: newTeam.approval_status,
       credentials: {
         username: generatedUsername,
         temporaryPassword: tempPassword,
@@ -152,12 +168,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Registration API error:', err);
-    if (err.code === 11000) {
-      return NextResponse.json(
-        { error: 'A duplicate team name or enrollment number already exists.' },
-        { status: 409 }
-      );
-    }
-    return NextResponse.json({ error: 'Server error processing registration.' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Server error processing registration.' }, { status: 500 });
   }
 }

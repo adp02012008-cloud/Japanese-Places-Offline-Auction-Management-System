@@ -1,49 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import EventSettings from '@/models/EventSettings';
-import AuditLog from '@/models/AuditLog';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { calculateEventResults } from '@/lib/services/calculationEngine';
 import { requireAdmin, handleAuthError } from '@/lib/auth/rbac';
 
 export async function POST(req: NextRequest) {
   try {
     const adminSession = await requireAdmin();
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
 
     const body = await req.json();
     const { isAnnouncementPublic } = body;
 
-    let settings = await EventSettings.findOne();
-    if (!settings) {
-      settings = await EventSettings.create({});
-    }
+    let { data: settings } = await supabase.from('event_settings').select('*').limit(1).maybeSingle();
 
-    const previousStatus = settings.isAnnouncementPublic;
-    settings.isAnnouncementPublic = Boolean(isAnnouncementPublic);
-    await settings.save();
+    const previousStatus = settings?.is_announcement_public ?? false;
+
+    if (settings) {
+      await supabase
+        .from('event_settings')
+        .update({
+          is_announcement_public: Boolean(isAnnouncementPublic),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', settings.id);
+    }
 
     const resultMetrics = await calculateEventResults();
 
-    await AuditLog.create({
-      adminId: adminSession.userId,
-      adminUsername: adminSession.username,
-      actionType: 'WINNER_ANNOUNCEMENT_TOGGLE',
-      affectedRecordType: 'EventSettings',
-      affectedRecordId: settings._id.toString(),
-      beforeValue: { isAnnouncementPublic: previousStatus },
-      afterValue: {
-        isAnnouncementPublic: settings.isAnnouncementPublic,
+    await supabase.from('audit_logs').insert({
+      admin_id: adminSession.userId,
+      admin_username: adminSession.username,
+      action_type: 'WINNER_ANNOUNCEMENT_TOGGLE',
+      affected_record_type: 'EventSettings',
+      affected_record_id: String(settings?.id || 'default'),
+      before_value: { is_announcement_public: previousStatus },
+      after_value: {
+        is_announcement_public: Boolean(isAnnouncementPublic),
         winner: resultMetrics.winner?.teamName,
       },
-      reason: settings.isAnnouncementPublic
+      reason: isAnnouncementPublic
         ? `Officially announced winner: ${resultMetrics.winner?.teamName || 'None'}`
         : 'Revoked public winner announcement',
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     });
 
     return NextResponse.json({
       success: true,
-      isAnnouncementPublic: settings.isAnnouncementPublic,
+      isAnnouncementPublic: Boolean(isAnnouncementPublic),
       winner: resultMetrics.winner,
       isTie: resultMetrics.isTie,
     });

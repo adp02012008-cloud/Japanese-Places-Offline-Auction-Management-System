@@ -115,7 +115,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-serif text-lg font-bold text-foreground">Atomic Multi-Doc Safety</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Full MongoDB transaction guarantees: zero duplicate sales, instant budget deductions, and audit logging for every bid recorded.
+                Atomic PostgreSQL safety: zero duplicate sales, instant budget deductions, and audit logging for every bid recorded.
               </p>
             </CardContent>
           </Card>
@@ -124,7 +124,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 py-6 px-6 text-center text-xs text-muted-foreground bg-background/50">
-        <p>© 2026 Japanese Places Offline Auction System. Engineered with Next.js, MongoDB Atlas & Supabase Storage.</p>
+        <p>© 2026 Japanese Places Offline Auction System. Powered by Next.js, Supabase Database & Storage.</p>
         <p className="mt-1">Strict offline physical bidding policy enforced — no online client-side bids.</p>
       </footer>
     </div>

@@ -1,50 +1,63 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import Team from '@/models/Team';
-import Purchase from '@/models/Purchase';
-import TeamMember from '@/models/TeamMember';
-import EventSettings from '@/models/EventSettings';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { requireTeam, handleAuthError } from '@/lib/auth/rbac';
 
 export async function GET() {
   try {
     const session = await requireTeam();
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
 
-    const team = await Team.findById(session.teamId).lean();
-    if (!team) {
+    const { data: team, error: teamErr } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', session.teamId)
+      .single();
+
+    if (teamErr || !team) {
       return NextResponse.json({ error: 'Team not found.' }, { status: 404 });
     }
 
-    const settings = await EventSettings.findOne().lean();
+    const { data: settings } = await supabase.from('event_settings').select('currency').limit(1).maybeSingle();
     const currency = settings?.currency || '₹';
 
     // Fetch team members
-    const members = await TeamMember.find({ teamId: team._id })
-      .select('fullName enrollmentNumber')
-      .lean();
+    const { data: members } = await supabase
+      .from('team_members')
+      .select('full_name, enrollment_number')
+      .eq('team_id', team.id);
 
-    // Fetch only this team's purchases WITHOUT actualWorthAtSale
-    const purchases = await Purchase.find({ teamId: team._id, status: 'CONFIRMED' })
-      .select('placeId placeName finalPurchasePrice confirmedAt notes')
-      .sort({ confirmedAt: -1 })
-      .lean();
+    // Fetch ONLY this team's purchases WITHOUT actual_worth_at_sale
+    const { data: purchases } = await supabase
+      .from('purchases')
+      .select('place_id, place_name, final_purchase_price, confirmed_at, notes')
+      .eq('team_id', team.id)
+      .eq('status', 'CONFIRMED')
+      .order('confirmed_at', { ascending: false });
 
     return NextResponse.json({
       success: true,
       currency,
       team: {
-        _id: team._id.toString(),
-        teamName: team.teamName,
-        approvalStatus: team.approvalStatus,
-        participationStatus: team.participationStatus,
-        startingBudget: team.startingBudget,
-        remainingBudget: team.remainingBudget,
-        totalSpent: team.totalSpent,
-        placesCount: purchases.length,
+        _id: String(team.id),
+        teamName: team.team_name,
+        approvalStatus: team.approval_status,
+        participationStatus: team.participation_status,
+        startingBudget: Number(team.starting_budget),
+        remainingBudget: Number(team.remaining_budget),
+        totalSpent: Number(team.total_spent),
+        placesCount: (purchases || []).length,
       },
-      members,
-      purchasedPlaces: purchases,
+      members: (members || []).map((m) => ({
+        fullName: m.full_name,
+        enrollmentNumber: m.enrollment_number,
+      })),
+      purchasedPlaces: (purchases || []).map((p) => ({
+        placeId: String(p.place_id),
+        placeName: p.place_name,
+        finalPurchasePrice: Number(p.final_purchase_price),
+        confirmedAt: p.confirmed_at,
+        notes: p.notes,
+      })),
     });
   } catch (err) {
     return handleAuthError(err);

@@ -1,25 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/db/mongodb';
-import Purchase from '@/models/Purchase';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { confirmOfflineSale } from '@/lib/services/auctionService';
 import { requireAdmin, handleAuthError } from '@/lib/auth/rbac';
 
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin();
-    await connectToDatabase();
+    const supabase = getSupabaseAdmin();
 
     const { searchParams } = new URL(req.url);
     const teamId = searchParams.get('teamId');
     const status = searchParams.get('status');
 
-    const filter: Record<string, any> = {};
-    if (teamId) filter.teamId = teamId;
-    if (status && status !== 'ALL') filter.status = status;
+    let query = supabase.from('purchases').select('*').order('confirmed_at', { ascending: false });
 
-    const purchases = await Purchase.find(filter).sort({ confirmedAt: -1 }).lean();
+    if (teamId) query = query.eq('team_id', teamId);
+    if (status && status !== 'ALL') query = query.eq('status', status);
 
-    return NextResponse.json({ success: true, purchases });
+    const { data: purchases, error } = await query;
+    if (error) throw error;
+
+    const mapped = (purchases || []).map((p) => ({
+      _id: String(p.id),
+      placeId: String(p.place_id),
+      placeName: p.place_name,
+      teamId: String(p.team_id),
+      teamName: p.team_name,
+      finalPurchasePrice: Number(p.final_purchase_price),
+      actualWorthAtSale: Number(p.actual_worth_at_sale),
+      status: p.status,
+      confirmedAt: p.confirmed_at,
+      adminId: p.admin_id,
+      adminUsername: p.admin_username,
+      notes: p.notes,
+    }));
+
+    return NextResponse.json({ success: true, purchases: mapped });
   } catch (err) {
     return handleAuthError(err);
   }
@@ -43,7 +59,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Final purchase price must be a non-negative number.' }, { status: 400 });
     }
 
-    // Execute atomic sale transaction
     const result = await confirmOfflineSale({
       placeId,
       teamId,

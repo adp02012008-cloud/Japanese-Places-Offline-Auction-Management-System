@@ -1,12 +1,8 @@
-import connectToDatabase from '@/lib/db/mongodb';
-import Team from '@/models/Team';
-import Purchase from '@/models/Purchase';
-import EventSettings from '@/models/EventSettings';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { ITeamResult, WinningRule } from '@/types';
 
 /**
- * Computes authoritative rankings and metrics directly from confirmed Purchase records.
- * Uses integer/exact arithmetic where possible. Avoids floating point issues.
+ * Computes authoritative rankings and metrics directly from Supabase purchase records.
  */
 export async function calculateEventResults(): Promise<{
   results: ITeamResult[];
@@ -16,23 +12,34 @@ export async function calculateEventResults(): Promise<{
   winner: ITeamResult | null;
   isTie: boolean;
 }> {
-  await connectToDatabase();
+  const supabase = getSupabaseAdmin();
 
-  const settings = await EventSettings.findOne().lean();
-  const activeRule: WinningRule = (settings?.activeWinningRule as WinningRule) || 'SAVINGS';
+  // 1. Fetch settings
+  const { data: settings } = await supabase.from('event_settings').select('*').limit(1).single();
+  const activeRule: WinningRule = (settings?.active_winning_rule as WinningRule) || 'SAVINGS';
   const currency = settings?.currency || '₹';
-  const startingBudget = settings?.startingBudgetPerTeam ?? 100000;
+  const startingBudget = Number(settings?.starting_budget_per_team ?? 100000);
 
-  // Retrieve approved participating teams
-  const teams = await Team.find({ approvalStatus: 'APPROVED' }).lean();
+  // 2. Fetch approved participating teams
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('approval_status', 'APPROVED');
 
-  // Retrieve all confirmed, non-cancelled purchases
-  const confirmedPurchases = await Purchase.find({ status: 'CONFIRMED' }).lean();
+  const teamList = teams || [];
 
-  // Map purchases by teamId
-  const purchasesByTeam = new Map<string, typeof confirmedPurchases>();
-  for (const purchase of confirmedPurchases) {
-    const tId = purchase.teamId.toString();
+  // 3. Fetch all confirmed purchases
+  const { data: confirmedPurchases } = await supabase
+    .from('purchases')
+    .select('*')
+    .eq('status', 'CONFIRMED');
+
+  const purchaseList = confirmedPurchases || [];
+
+  // Map purchases by team_id
+  const purchasesByTeam = new Map<string, typeof purchaseList>();
+  for (const purchase of purchaseList) {
+    const tId = String(purchase.team_id);
     if (!purchasesByTeam.has(tId)) {
       purchasesByTeam.set(tId, []);
     }
@@ -40,12 +47,12 @@ export async function calculateEventResults(): Promise<{
   }
 
   // Calculate metrics for each team
-  const calculatedTeams: Omit<ITeamResult, 'rank'>[] = teams.map((team) => {
-    const teamIdStr = team._id.toString();
+  const calculatedTeams: Omit<ITeamResult, 'rank'>[] = teamList.map((team) => {
+    const teamIdStr = String(team.id);
     const teamPurchases = purchasesByTeam.get(teamIdStr) || [];
 
-    const totalSpent = teamPurchases.reduce((acc, p) => acc + p.finalPurchasePrice, 0);
-    const totalActualWorth = teamPurchases.reduce((acc, p) => acc + p.actualWorthAtSale, 0);
+    const totalSpent = teamPurchases.reduce((acc, p) => acc + Number(p.final_purchase_price), 0);
+    const totalActualWorth = teamPurchases.reduce((acc, p) => acc + Number(p.actual_worth_at_sale), 0);
     const totalSavings = totalActualWorth - totalSpent;
     const remainingBudget = Math.max(0, startingBudget - totalSpent);
     const placesPurchased = teamPurchases.length;
@@ -58,7 +65,7 @@ export async function calculateEventResults(): Promise<{
 
     return {
       teamId: teamIdStr,
-      teamName: team.teamName,
+      teamName: team.team_name,
       placesPurchased,
       totalActualWorth,
       totalSpent,
@@ -67,10 +74,10 @@ export async function calculateEventResults(): Promise<{
       valueEfficiency,
       budgetUtilization,
       purchasedPlaces: teamPurchases.map((p) => ({
-        placeId: p.placeId.toString(),
-        placeName: p.placeName,
-        finalPrice: p.finalPurchasePrice,
-        actualWorth: p.actualWorthAtSale,
+        placeId: String(p.place_id),
+        placeName: p.place_name,
+        finalPrice: Number(p.final_purchase_price),
+        actualWorth: Number(p.actual_worth_at_sale),
       })),
     };
   });
@@ -78,15 +85,12 @@ export async function calculateEventResults(): Promise<{
   // Sort based on active rule and tie-breakers
   calculatedTeams.sort((a, b) => {
     if (activeRule === 'SAVINGS') {
-      // Primary: Highest Total Savings
       if (b.totalSavings !== a.totalSavings) {
         return b.totalSavings - a.totalSavings;
       }
-      // Tie-breaker 1: Higher total actual worth acquired
       if (b.totalActualWorth !== a.totalActualWorth) {
         return b.totalActualWorth - a.totalActualWorth;
       }
-      // Tie-breaker 2: Lower total amount spent
       return a.totalSpent - b.totalSpent;
     }
 
@@ -96,7 +100,6 @@ export async function calculateEventResults(): Promise<{
       if (effB !== effA) {
         return effB - effA;
       }
-      // Tie-breaker: higher savings
       if (b.totalSavings !== a.totalSavings) {
         return b.totalSavings - a.totalSavings;
       }
@@ -104,11 +107,9 @@ export async function calculateEventResults(): Promise<{
     }
 
     if (activeRule === 'ACTUAL_WORTH') {
-      // Primary: Highest Total Actual Worth
       if (b.totalActualWorth !== a.totalActualWorth) {
         return b.totalActualWorth - a.totalActualWorth;
       }
-      // Tie-breaker 1: Higher savings
       if (b.totalSavings !== a.totalSavings) {
         return b.totalSavings - a.totalSavings;
       }
@@ -118,7 +119,6 @@ export async function calculateEventResults(): Promise<{
     return 0;
   });
 
-  // Assign ranks
   const rankedResults: ITeamResult[] = calculatedTeams.map((team, idx) => ({
     ...team,
     rank: idx + 1,
@@ -126,7 +126,6 @@ export async function calculateEventResults(): Promise<{
 
   const winner = rankedResults.length > 0 ? rankedResults[0] : null;
 
-  // Check if true tie exists at rank 1
   let isTie = false;
   if (rankedResults.length >= 2) {
     const first = rankedResults[0];
