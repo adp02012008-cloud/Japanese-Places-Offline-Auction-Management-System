@@ -1,4 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
+
+if (typeof globalThis !== 'undefined' && !globalThis.WebSocket) {
+  (globalThis as any).WebSocket = WebSocket;
+}
 
 export function getSupabaseAdmin() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';

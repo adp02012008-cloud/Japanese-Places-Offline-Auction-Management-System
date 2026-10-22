@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import WebSocket from 'ws';
 import { hashPassword } from '../src/lib/auth/session';
+
+if (!globalThis.WebSocket) {
+  (globalThis as any).WebSocket = WebSocket;
+}
 
 // Manually parse .env.local if present
 const envPath = path.resolve(process.cwd(), '.env.local');
@@ -32,6 +37,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
+  realtime: { createWebSocket: () => null as any },
 });
 
 const INITIAL_LANDMARKS = [
