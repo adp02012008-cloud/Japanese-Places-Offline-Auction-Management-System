@@ -1,131 +1,495 @@
+'use client';
+
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Users, ShieldCheck, MonitorPlay, Sparkles, Building2, Landmark, Coins } from 'lucide-react';
+import {
+  Users,
+  ShieldCheck,
+  MonitorPlay,
+  Sparkles,
+  Landmark,
+  Crown,
+  ChevronRight,
+  Flame,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
+  Award,
+  Gavel,
+  Compass,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import SakuraPetalsCanvas from '@/components/SakuraPetalsCanvas';
+import { formatCurrency } from '@/lib/utils';
+import { IPlace } from '@/types';
+
+const SHOWCASE_LANDMARKS = [
+  {
+    name: 'Mount Fuji',
+    kanji: '富士山',
+    tagline: 'Sacred UNESCO Summit',
+    startingPrice: 35000,
+    imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200&auto=format&fit=crop',
+    region: 'Honshu',
+  },
+  {
+    name: 'Fushimi Inari',
+    kanji: '伏見稲荷',
+    tagline: '10,000 Vermilion Torii Gates',
+    startingPrice: 20000,
+    imageUrl: 'https://images.unsplash.com/photo-1478436127897-769e00d2c715?q=80&w=1200&auto=format&fit=crop',
+    region: 'Kyoto',
+  },
+  {
+    name: 'Kinkaku-ji',
+    kanji: '金閣寺',
+    tagline: 'Pure Gold Leaf Zen Pavilion',
+    startingPrice: 25000,
+    imageUrl: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?q=80&w=1200&auto=format&fit=crop',
+    region: 'Kyoto',
+  },
+  {
+    name: 'Himeji Castle',
+    kanji: '姫路城',
+    tagline: 'The White Heron Fortress',
+    startingPrice: 30000,
+    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop',
+    region: 'Hyogo',
+  },
+  {
+    name: 'Miyajima Shrine',
+    kanji: '厳島神社',
+    tagline: 'Floating Torii on the Inland Sea',
+    startingPrice: 22000,
+    imageUrl: 'https://images.unsplash.com/photo-1528164344705-475426879c0d?q=80&w=1200&auto=format&fit=crop',
+    region: 'Hiroshima',
+  },
+  {
+    name: 'Arashiyama Bamboo',
+    kanji: '嵐山竹林',
+    tagline: 'Emerald Wind Whispering Grove',
+    startingPrice: 15000,
+    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop',
+    region: 'Kyoto',
+  },
+];
 
 export default function HomePage() {
+  const [places, setPlaces] = useState<IPlace[]>([]);
+  const [videoPlaying, setVideoPlaying] = useState(true);
+  const [activeTab, setActiveTab] = useState<'all' | 'available' | 'sold'>('all');
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    fetch('/api/places')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.places) {
+          setPlaces(data.places);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleVideoPlayback = () => {
+    if (!videoRef.current) return;
+    if (videoPlaying) {
+      videoRef.current.pause();
+      setVideoPlaying(false);
+    } else {
+      videoRef.current.play();
+      setVideoPlaying(true);
+    }
+  };
+
+  const displayedCatalogue = places.length > 0 ? places : (SHOWCASE_LANDMARKS as any);
+
   return (
-    <div className="relative min-h-screen flex flex-col justify-between overflow-hidden bg-washi-100 dark:bg-sumi-950 text-sumi-900 dark:text-sumi-100">
-      {/* Decorative Traditional Japanese Motif Overlay */}
-      <div className="absolute inset-0 bg-japanese-pattern opacity-40 pointer-events-none" />
+    <div className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white">
+      {/* 1. Cinematic Japanese Video Background Layer */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop"
+          className="h-full w-full object-cover scale-105 opacity-30 filter saturate-150 contrast-125 transition-opacity duration-1000"
+        >
+          {/* High-quality Japanese atmospheric scenery videos */}
+          <source
+            src="https://assets.mixkit.co/videos/preview/mixkit-traditional-japanese-garden-and-pagoda-42654-large.mp4"
+            type="video/mp4"
+          />
+          <source
+            src="https://assets.mixkit.co/videos/preview/mixkit-cherry-blossom-flowers-in-spring-42861-large.mp4"
+            type="video/mp4"
+          />
+        </video>
 
-      {/* Floating subtle ambient glows */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-torii-500/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-kiniro-500/15 blur-3xl pointer-events-none" />
+        {/* Ambient Dark Gradient Vignettes */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07070a]/90 via-[#07070a]/60 to-[#07070a] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07070a]/80 via-transparent to-[#07070a]/80 pointer-events-none" />
 
-      {/* Top Header Bar */}
-      <header className="relative z-10 border-b border-border/50 bg-background/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="h-10 w-10 rounded-xl bg-torii-600 text-white flex items-center justify-center shadow-glow-torii font-serif font-black text-lg">
-            鳥
+        {/* Japanese Asanoha Geometric Pattern Overlay */}
+        <div className="absolute inset-0 bg-japanese-pattern opacity-15 pointer-events-none" />
+
+        {/* Glowing Japanese Ambient Orbs */}
+        <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-torii-600/15 blur-[160px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-kiniro-500/15 blur-[150px] pointer-events-none" />
+      </div>
+
+      {/* 2. Interactive Falling Sakura Blossom Petals (60FPS Canvas Animation) */}
+      <SakuraPetalsCanvas />
+
+      {/* 3. Decorative Vertical Japanese Calligraphy Sidebars */}
+      <div className="hidden 2xl:flex fixed left-6 top-1/3 z-20 flex-col items-center space-y-4 pointer-events-none select-none opacity-40">
+        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-torii-500 to-transparent" />
+        <div className="[writing-mode:vertical-rl] font-serif tracking-[0.4em] text-xs text-kiniro-300 font-bold uppercase">
+          日本名所競売祭 • TRADITION & GLORY
+        </div>
+        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-torii-500 to-transparent" />
+      </div>
+
+      <div className="hidden 2xl:flex fixed right-6 top-1/3 z-20 flex-col items-center space-y-4 pointer-events-none select-none opacity-40">
+        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-kiniro-500 to-transparent" />
+        <div className="[writing-mode:vertical-rl] font-serif tracking-[0.4em] text-xs text-torii-400 font-bold uppercase">
+          武士道 • STRATEGY & DISCIPLINE
+        </div>
+        <div className="w-[1px] h-16 bg-gradient-to-b from-transparent via-kiniro-500 to-transparent" />
+      </div>
+
+      {/* 4. Top Japanese Navigation Header */}
+      <header className="relative z-30 border-b border-white/10 bg-[#07070a]/75 backdrop-blur-xl px-6 lg:px-12 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="relative group">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-torii-600 to-torii-700 text-white flex items-center justify-center shadow-glow-torii font-serif font-black text-xl border border-torii-400/40 transition-transform group-hover:scale-105">
+              鳥
+            </div>
+            <div className="absolute -inset-1 rounded-2xl bg-torii-600/30 blur-sm -z-10 group-hover:opacity-100 transition-opacity" />
           </div>
           <div>
-            <div className="font-serif font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
+            <div className="font-serif font-bold text-lg lg:text-xl leading-tight tracking-wider text-white flex items-center gap-2.5">
               <span>Japanese Places Auction</span>
-              <Badge variant="gold" className="text-[10px] tracking-widest px-2 py-0 uppercase">
-                Offline Event
+              <Badge variant="gold" className="text-[10px] tracking-widest px-2.5 py-0.5 uppercase font-bold shadow-md">
+                Offline Live
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground font-sans">
-              日本名所競売管理システム • Physical Live Bidding System
+            <p className="text-[11px] text-sumi-300 font-sans tracking-wide">
+              日本名所競売管理システム • Physical Room Auction System
             </p>
           </div>
         </div>
 
+        {/* Action Controls & Portals */}
         <div className="flex items-center space-x-3">
+          <button
+            onClick={toggleVideoPlayback}
+            title={videoPlaying ? 'Pause ambient video' : 'Play ambient video'}
+            className="hidden sm:flex h-9 w-9 rounded-xl border border-white/15 bg-white/5 hover:bg-white/15 items-center justify-center text-xs text-white transition-colors"
+          >
+            {videoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </button>
+
           <Link href="/login">
-            <Button variant="outline" size="sm" className="font-medium">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-white/20 bg-white/5 hover:bg-white/15 text-white font-medium text-xs sm:text-sm h-9"
+            >
               Team Login
             </Button>
           </Link>
+
           <Link href="/admin/login">
-            <Button variant="default" size="sm" className="font-medium bg-sumi-900 hover:bg-sumi-800 text-white">
-              Admin Portal
+            <Button
+              size="sm"
+              className="bg-gradient-to-r from-torii-600 to-rose-600 hover:from-torii-500 hover:to-rose-500 text-white font-semibold text-xs sm:text-sm h-9 shadow-glow-torii"
+            >
+              Admin Console
             </Button>
           </Link>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="relative z-10 container mx-auto px-6 py-12 flex-1 flex flex-col items-center justify-center text-center">
-        <div className="max-w-3xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-torii-50 dark:bg-torii-950/60 border border-torii-200 dark:border-torii-800 text-torii-700 dark:text-torii-300 text-xs font-semibold tracking-wide">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Official Offline Auction Management Engine</span>
-          </div>
+      {/* 5. Main Hero Section with Dynamic Calligraphy Banner */}
+      <main className="relative z-20 container mx-auto px-6 py-12 lg:py-20 flex-1 flex flex-col items-center justify-center text-center">
+        {/* Floating Tag */}
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-torii-950/80 via-sumi-900/90 to-kiniro-950/80 border border-torii-500/40 text-torii-300 text-xs sm:text-sm font-semibold tracking-wide shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-700">
+          <Sparkles className="h-4 w-4 text-kiniro-400 animate-spin" />
+          <span>Official Offline Japanese Landmark Auction • 2026 Season</span>
+          <span className="hidden sm:inline text-kiniro-400 font-serif">競売開催</span>
+        </div>
 
-          <h1 className="font-serif text-4xl sm:text-6xl font-extrabold tracking-tight text-sumi-900 dark:text-washi-50 leading-tight">
-            Acquire Iconic <span className="text-torii-600 underline decoration-kiniro-500/50 decoration-wavy">Japanese Landmarks</span>
+        {/* Hero Title */}
+        <div className="max-w-4xl space-y-6 mt-6">
+          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.15] drop-shadow-2xl">
+            Acquire Iconic <br className="hidden sm:inline" />
+            <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-torii-500 via-rose-400 to-kiniro-400">
+              Japanese Landmarks
+              <span className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-torii-500 via-kiniro-400 to-transparent rounded-full shadow-glow-torii" />
+            </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Manage physical live bidding across famous castles, sacred shrines, temples, and natural wonders.
-            Real-time multi-document balance deduction, confidential actual valuations, and projector display.
+          <p className="text-base sm:text-xl text-sumi-200 max-w-2xl mx-auto leading-relaxed font-sans font-normal pt-2 drop-shadow-md">
+            Manage physical room bidding across sacred shrines, golden pavilions, feudal castles, and emerald bamboo pathways. 
+            Powered by atomic balance deductions, confidential actual worth, and theatrical 16:9 projector displays.
           </p>
 
-          {/* Quick Action CTAs */}
-          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+          {/* Core Action CTA Buttons */}
+          <div className="pt-6 flex flex-wrap items-center justify-center gap-4">
             <Link href="/register">
-              <Button size="lg" className="bg-torii-600 hover:bg-torii-700 text-white px-8 h-13 shadow-glow-torii text-base">
-                <Users className="h-5 w-5 mr-2" />
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-torii-600 via-rose-600 to-torii-700 hover:from-torii-500 hover:to-rose-500 text-white font-bold px-8 h-14 shadow-glow-torii text-base rounded-2xl border border-torii-400/40 transition-all hover:scale-105"
+              >
+                <Users className="h-5 w-5 mr-2.5" />
                 Register Your Team
               </Button>
             </Link>
 
             <Link href="/presentation" target="_blank">
-              <Button size="lg" variant="gold" className="px-8 h-13 text-base shadow-glow-gold">
-                <MonitorPlay className="h-5 w-5 mr-2" />
-                Launch 16:9 Presentation
+              <Button
+                size="lg"
+                variant="gold"
+                className="px-8 h-14 text-base font-bold rounded-2xl shadow-glow-gold border border-kiniro-400/50 transition-all hover:scale-105"
+              >
+                <MonitorPlay className="h-5 w-5 mr-2.5" />
+                Launch 16:9 Theater View
+              </Button>
+            </Link>
+
+            <Link href="/admin/sales">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/20 bg-white/5 hover:bg-white/15 text-white font-medium px-6 h-14 text-base rounded-2xl backdrop-blur-md"
+              >
+                <Gavel className="h-5 w-5 mr-2" />
+                Hammer Live Sale
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full mt-16 text-left">
-          <Card className="border-border/60 bg-card/80 backdrop-blur-md hover:border-torii-400 transition-all hover:shadow-sumi-md">
-            <CardContent className="p-6 space-y-3">
-              <div className="h-11 w-11 rounded-lg bg-torii-50 dark:bg-torii-950 flex items-center justify-center text-torii-600">
-                <Users className="h-5 w-5" />
-              </div>
-              <h3 className="font-serif text-lg font-bold text-foreground">Equal Team Budgets</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Teams register dynamically with member enrollment numbers. Admins allocate equal starting capital (₹100,000 standard).
-              </p>
-            </CardContent>
-          </Card>
+        {/* 6. Live Auction Highlights Bar */}
+        <div className="mt-14 w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-left">
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
+            <div className="text-xs text-kiniro-400 uppercase tracking-widest font-mono">Equal Capital</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">₹1,00,000</div>
+            <div className="text-[11px] text-sumi-300 mt-0.5">Starting team budget</div>
+          </div>
 
-          <Card className="border-border/60 bg-card/80 backdrop-blur-md hover:border-kiniro-400 transition-all hover:shadow-sumi-md">
-            <CardContent className="p-6 space-y-3">
-              <div className="h-11 w-11 rounded-lg bg-kiniro-50 dark:bg-kiniro-950 flex items-center justify-center text-kiniro-600">
-                <Landmark className="h-5 w-5" />
-              </div>
-              <h3 className="font-serif text-lg font-bold text-foreground">Confidential Valuations</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Secret actual-worth benchmarks remain hidden from the audience, calculating true savings and value efficiency automatically.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
+            <div className="text-xs text-torii-400 uppercase tracking-widest font-mono">Historic Relics</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">10 Places</div>
+            <div className="text-[11px] text-sumi-300 mt-0.5">Iconic Japanese landmarks</div>
+          </div>
 
-          <Card className="border-border/60 bg-card/80 backdrop-blur-md hover:border-emerald-400 transition-all hover:shadow-sumi-md">
-            <CardContent className="p-6 space-y-3">
-              <div className="h-11 w-11 rounded-lg bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600">
-                <ShieldCheck className="h-5 w-5" />
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
+            <div className="text-xs text-emerald-400 uppercase tracking-widest font-mono">Integrity</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">100% Offline</div>
+            <div className="text-[11px] text-sumi-300 mt-0.5">Physical hammer bidding</div>
+          </div>
+
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
+            <div className="text-xs text-cyan-400 uppercase tracking-widest font-mono">Stage Feed</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">16:9 Theater</div>
+            <div className="text-[11px] text-sumi-300 mt-0.5">Projector big-screen ready</div>
+          </div>
+        </div>
+
+        {/* 7. Japanese Landmark Catalogue Showcase */}
+        <div className="w-full max-w-6xl mt-20 text-left space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-mono text-kiniro-400 uppercase tracking-widest">
+                <Compass className="h-3.5 w-3.5" />
+                <span>Featured Catalogue</span>
               </div>
-              <h3 className="font-serif text-lg font-bold text-foreground">Atomic Multi-Doc Safety</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Atomic PostgreSQL safety: zero duplicate sales, instant budget deductions, and audit logging for every bid recorded.
-              </p>
-            </CardContent>
-          </Card>
+              <h2 className="font-serif text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                Sacred Japanese Relics Up for Auction
+              </h2>
+            </div>
+
+            <Link href="/presentation" className="text-xs font-bold text-kiniro-400 hover:text-kiniro-300 flex items-center gap-1 group">
+              <span>View in 16:9 Stage Presentation</span>
+              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          {/* Landmark Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayedCatalogue.slice(0, 6).map((item: any, idx: number) => {
+              const name = item.placeName || item.name;
+              const price = item.startingPrice || 25000;
+              const img = item.imageUrl || item.image_url;
+              const status = item.status || 'NOT_SOLD';
+              const winningTeam = item.winningTeamName;
+
+              return (
+                <div
+                  key={idx}
+                  className="group relative rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-md overflow-hidden hover:border-torii-500/60 transition-all duration-500 hover:shadow-2xl hover:shadow-torii-900/30 flex flex-col justify-between"
+                >
+                  {/* Landmark Photo with Vignette */}
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/60">
+                    <img
+                      src={img}
+                      alt={name}
+                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-black/30 to-transparent" />
+
+                    {/* Status Badge */}
+                    <div className="absolute top-3 right-3">
+                      <Badge
+                        variant={status === 'SOLD' ? 'sold' : 'available'}
+                        className="text-[11px] px-2.5 py-0.5 font-bold uppercase tracking-wider shadow-md"
+                      >
+                        {status === 'SOLD' ? `Sold to ${winningTeam || 'Team'}` : 'Available'}
+                      </Badge>
+                    </div>
+
+                    {/* Japanese Kanji Crest Stamp in corner */}
+                    <div className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/15 text-kiniro-400 font-serif font-black flex items-center justify-center text-xs">
+                      {idx + 1}
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-5 space-y-3">
+                    <div>
+                      <h3 className="font-serif text-xl font-bold text-white group-hover:text-kiniro-300 transition-colors">
+                        {name}
+                      </h3>
+                      <p className="text-xs text-sumi-300 line-clamp-2 mt-1">
+                        {item.description || item.tagline || 'Sacred historic landmark available for offline bidding.'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                      <div>
+                        <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
+                          Starting Hammer
+                        </div>
+                        <div className="font-serif font-black text-lg text-kiniro-400">
+                          {formatCurrency(price, '₹')}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
+                          Valuation
+                        </div>
+                        <div className="text-xs text-sumi-300 font-mono italic">
+                          🔒 Confidential
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 8. Architectural Features & Japanese Bidding Rules Bento Grid */}
+        <div className="w-full max-w-6xl mt-24 text-left space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2">
+            <div className="text-xs font-mono text-torii-400 uppercase tracking-widest font-semibold">
+              Tournament Engineering
+            </div>
+            <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-white">
+              Rules of the Sakura Auction Floor
+            </h2>
+            <p className="text-sm text-sumi-300">
+              Built for seamless physical bidding with strict cryptographic transparency and anti-overbid damage controls.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Feature 1 */}
+            <Card className="border border-white/15 bg-gradient-to-br from-white/[0.04] to-transparent backdrop-blur-md hover:border-torii-500/50 transition-all shadow-xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="h-12 w-12 rounded-2xl bg-torii-500/20 text-torii-400 border border-torii-500/30 flex items-center justify-center font-bold text-xl">
+                  陣
+                </div>
+                <h3 className="font-serif text-xl font-bold text-white">Dynamic Team Formation</h3>
+                <p className="text-sm text-sumi-300 leading-relaxed">
+                  Teams register dynamically with unique student enrollment validation. The system immediately generates isolated team portal credentials with temporary passwords.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 2 */}
+            <Card className="border border-white/15 bg-gradient-to-br from-white/[0.04] to-transparent backdrop-blur-md hover:border-kiniro-500/50 transition-all shadow-xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="h-12 w-12 rounded-2xl bg-kiniro-500/20 text-kiniro-400 border border-kiniro-500/30 flex items-center justify-center font-bold text-xl">
+                  秘
+                </div>
+                <h3 className="font-serif text-xl font-bold text-white">Confidential Benchmarks</h3>
+                <p className="text-sm text-sumi-300 leading-relaxed">
+                  Each landmark carries a secret actual worth hidden from the audience. The system evaluates true savings, return on capital, and value efficiency without leaking data.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Feature 3 */}
+            <Card className="border border-white/15 bg-gradient-to-br from-white/[0.04] to-transparent backdrop-blur-md hover:border-emerald-500/50 transition-all shadow-xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-xl">
+                  過
+                </div>
+                <h3 className="font-serif text-xl font-bold text-white">Special Overpay Engine</h3>
+                <p className="text-sm text-sumi-300 leading-relaxed">
+                  If every team bids above actual worth, the system refuses to falsely declare a profitable winner. Instead, it recognizes damage-control champions who minimize net losses.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* 9. Final Call to Action */}
+        <div className="w-full max-w-4xl mt-24 rounded-3xl border border-torii-500/40 bg-gradient-to-r from-torii-950/60 via-sumi-900/90 to-kiniro-950/60 p-8 sm:p-12 text-center space-y-6 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-torii-500/20 blur-3xl pointer-events-none" />
+          <div className="h-14 w-14 mx-auto rounded-2xl bg-gradient-to-br from-torii-600 to-kiniro-500 text-white flex items-center justify-center font-serif font-black text-2xl shadow-glow-torii">
+            競
+          </div>
+          <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-white">
+            Ready to Begin the Auction?
+          </h2>
+          <p className="text-sm sm:text-base text-sumi-200 max-w-xl mx-auto">
+            Register your team members or open the 16:9 theater projection screen to begin physical bidding in the auction room.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <Link href="/register">
+              <Button size="lg" className="bg-torii-600 hover:bg-torii-700 text-white font-bold px-8 h-12 rounded-xl shadow-glow-torii">
+                Register Team
+              </Button>
+            </Link>
+            <Link href="/presentation" target="_blank">
+              <Button size="lg" variant="gold" className="px-8 h-12 rounded-xl shadow-glow-gold font-bold">
+                Projector Screen
+              </Button>
+            </Link>
+          </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-border/40 py-6 px-6 text-center text-xs text-muted-foreground bg-background/50">
-        <p>© 2026 Japanese Places Offline Auction System. Powered by Next.js, Supabase Database & Storage.</p>
-        <p className="mt-1">Strict offline physical bidding policy enforced — no online client-side bids.</p>
+      {/* 10. Footer */}
+      <footer className="relative z-20 border-t border-white/10 py-8 px-6 text-center text-xs text-sumi-400 bg-[#07070a]/90 backdrop-blur-xl mt-16">
+        <p className="text-sumi-300 font-serif">
+          © 2026 Japanese Places Offline Auction System • 日本名所競売管理システム
+        </p>
+        <p className="mt-1.5 text-sumi-400">
+          Strict offline live room auction protocol. Zero client-side bidding buttons.
+        </p>
       </footer>
     </div>
   );
