@@ -126,3 +126,25 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(160, 150, 140, 0.5);
 }
+
+/* Lenis Smooth Scroll Rules */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}

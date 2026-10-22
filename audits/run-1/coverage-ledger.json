@@ -1,0 +1,346 @@
+[
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fadmin%2Fsales%2Froute.ts%23POST%20%2Fapi%2Fadmin%2Fsales::src%2Flib%2Fservices%2FauctionService.ts%23AtomicBudgetDeduction::src%2Flib%2Fservices::ATTACK-CLASSES.md%23Business%20logic",
+    "canonical_refs": {
+      "surface": "src/app/api/admin/sales/route.ts#POST /api/admin/sales",
+      "boundary": "src/lib/services/auctionService.ts#AtomicBudgetDeduction",
+      "subsystem": "src/lib/services",
+      "attack_class": "ATTACK-CLASSES.md#Business logic"
+    },
+    "surface": "Offline Sale Confirmation Handler",
+    "boundary": "Team Budget and Single-Sale Invariant Boundary",
+    "subsystem": "Auction Service",
+    "attack_class": "Business logic",
+    "starting_paths": [
+      "src/app/api/admin/sales/route.ts",
+      "src/lib/services/auctionService.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Business logic",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/app/api/admin/sales/route.ts",
+      "src/lib/services/auctionService.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/app/api/admin/sales/route.ts",
+          "src/lib/services/auctionService.ts"
+        ],
+        "invariant": "Budget checks and deductions must occur atomically within a database transaction.",
+        "method": "source",
+        "result": "Budget check and deduction occur across multiple non-atomic queries.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "FPT-AUCTION-RACE-001"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fauth%2Flogin%2Froute.ts%23POST%20%2Fapi%2Fauth%2Flogin::src%2Flib%2Fauth%2Frbac.ts%23PublicToAdminOrTeam::src%2Fapp%2Fapi%2Fauth::ATTACK-CLASSES.md%23Access%20control",
+    "canonical_refs": {
+      "surface": "src/app/api/auth/login/route.ts#POST /api/auth/login",
+      "boundary": "src/lib/auth/rbac.ts#PublicToAdminOrTeam",
+      "subsystem": "src/app/api/auth",
+      "attack_class": "ATTACK-CLASSES.md#Access control"
+    },
+    "surface": "Authentication Login Endpoint",
+    "boundary": "Unauthenticated to Admin or Team Boundary",
+    "subsystem": "Auth Subsystem",
+    "attack_class": "Access control",
+    "starting_paths": [
+      "src/app/api/auth/login/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/app/api/auth/login/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/app/api/auth/login/route.ts"
+        ],
+        "invariant": "Authentication endpoint must throttle failed login attempts.",
+        "method": "source",
+        "result": "Endpoint processes repeated attempts without rate limiting or lockout.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "FPT-AUTH-BRUTEFORCE-001"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fplaces%2Froute.ts%23GET%20%2Fapi%2Fplaces::src%2Fapp%2Fapi%2Fplaces%2Froute.ts%23ConfidentialValuationBoundary::src%2Fapp%2Fapi%2Fplaces::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
+    "canonical_refs": {
+      "surface": "src/app/api/places/route.ts#GET /api/places",
+      "boundary": "src/app/api/places/route.ts#ConfidentialValuationBoundary",
+      "subsystem": "src/app/api/places",
+      "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage"
+    },
+    "surface": "Public Places Catalogue Route",
+    "boundary": "Confidential Valuation Exclusion Boundary",
+    "subsystem": "Catalogue Subsystem",
+    "attack_class": "Feature abuse and data leakage",
+    "starting_paths": [
+      "src/app/api/places/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "covered",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/app/api/places/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/app/api/places/route.ts"
+        ],
+        "invariant": "Public catalogue endpoint must exclude actual_worth from database projection.",
+        "method": "source",
+        "result": "Verified explicit projection excludes actual_worth from JSON response.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fpresentation%2Froute.ts%23GET%20%2Fapi%2Fpresentation::src%2Fapp%2Fapi%2Fpresentation%2Froute.ts%23PublicProjectionFeed::src%2Fapp%2Fapi%2Fpresentation::ATTACK-CLASSES.md%23Feature%20abuse%20and%20data%20leakage",
+    "canonical_refs": {
+      "surface": "src/app/api/presentation/route.ts#GET /api/presentation",
+      "boundary": "src/app/api/presentation/route.ts#PublicProjectionFeed",
+      "subsystem": "src/app/api/presentation",
+      "attack_class": "ATTACK-CLASSES.md#Feature abuse and data leakage"
+    },
+    "surface": "Projector and Public Screen Endpoint",
+    "boundary": "Confidentiality and Winner Revelation Boundary",
+    "subsystem": "Presentation Subsystem",
+    "attack_class": "Feature abuse and data leakage",
+    "starting_paths": [
+      "src/app/api/presentation/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Feature abuse and data leakage",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "covered",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/app/api/presentation/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/app/api/presentation/route.ts"
+        ],
+        "invariant": "Public presentation feed must withhold actual_worth and individual team profit figures.",
+        "method": "source",
+        "result": "Presentation route strictly projects public summaries and withheld metrics.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Fapp%2Fapi%2Fregistration%2Froute.ts%23POST%20%2Fapi%2Fregistration::src%2Fapp%2Fapi%2Fregistration%2Froute.ts%23TeamRegistrationValidation::src%2Fapp%2Fapi%2Fregistration::ATTACK-CLASSES.md%23Injection",
+    "canonical_refs": {
+      "surface": "src/app/api/registration/route.ts#POST /api/registration",
+      "boundary": "src/app/api/registration/route.ts#TeamRegistrationValidation",
+      "subsystem": "src/app/api/registration",
+      "attack_class": "ATTACK-CLASSES.md#Injection"
+    },
+    "surface": "Public Team Registration Endpoint",
+    "boundary": "Public Input Validation and Sanitization Boundary",
+    "subsystem": "Registration Subsystem",
+    "attack_class": "Injection",
+    "starting_paths": [
+      "src/app/api/registration/route.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Injection",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "covered",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/app/api/registration/route.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/app/api/registration/route.ts"
+        ],
+        "invariant": "Input strings must be strictly validated against length, types, and duplicates.",
+        "method": "source",
+        "result": "Input validation and duplicate checks properly sanitize fields.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Flib%2Fauth%2Fsession.ts%23createSessionToken::src%2Flib%2Fauth%2Fsession.ts%23JWTSigning::src%2Flib%2Fauth::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+    "canonical_refs": {
+      "surface": "src/lib/auth/session.ts#createSessionToken",
+      "boundary": "src/lib/auth/session.ts#JWTSigning",
+      "subsystem": "src/lib/auth",
+      "attack_class": "ATTACK-CLASSES.md#Cryptography and secrets"
+    },
+    "surface": "JWT Session Generation",
+    "boundary": "Session Token Signing Key Integrity",
+    "subsystem": "Auth Session Subsystem",
+    "attack_class": "Cryptography and secrets",
+    "starting_paths": [
+      "src/lib/auth/session.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Cryptography and secrets",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/lib/auth/session.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/lib/auth/session.ts"
+        ],
+        "invariant": "Session secret must not fall back to a hardcoded predictable string.",
+        "method": "source",
+        "result": "Source code falls back to static hardcoded string when AUTH_SECRET is unset.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "FPT-AUTH-JWT-SECRET-001"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "src%2Flib%2Fauth%2Fsession.ts%23hashPassword::src%2Flib%2Fauth%2Fsession.ts%23PasswordStorage::src%2Flib%2Fauth::ATTACK-CLASSES.md%23Cryptography%20and%20secrets",
+    "canonical_refs": {
+      "surface": "src/lib/auth/session.ts#hashPassword",
+      "boundary": "src/lib/auth/session.ts#PasswordStorage",
+      "subsystem": "src/lib/auth",
+      "attack_class": "ATTACK-CLASSES.md#Cryptography and secrets"
+    },
+    "surface": "Password Hashing Routine",
+    "boundary": "Password Hash Storage Integrity",
+    "subsystem": "Auth Password Subsystem",
+    "attack_class": "Cryptography and secrets",
+    "starting_paths": [
+      "src/lib/auth/session.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Cryptography and secrets",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "src/lib/auth/session.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "src/lib/auth/session.ts"
+        ],
+        "invariant": "Password hashing fallback must generate per-credential unique salts.",
+        "method": "source",
+        "result": "scrypt fallback uses hardcoded static salt string ja_salt_2026.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "FPT-AUTH-PW-SALT-001"
+    ],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "supabase%2Fschema.sql%23RowLevelSecurity::supabase%2Fschema.sql%23DirectDatabasePostgREST::supabase::ATTACK-CLASSES.md%23Access%20control",
+    "canonical_refs": {
+      "surface": "supabase/schema.sql#RowLevelSecurity",
+      "boundary": "supabase/schema.sql#DirectDatabasePostgREST",
+      "subsystem": "supabase",
+      "attack_class": "ATTACK-CLASSES.md#Access control"
+    },
+    "surface": "Database Row Level Security Policies",
+    "boundary": "Direct PostgREST Anon Client to PostgreSQL Store",
+    "subsystem": "Database Schema",
+    "attack_class": "Access control",
+    "starting_paths": [
+      "supabase/schema.sql",
+      "src/utils/supabase/client.ts"
+    ],
+    "ordinary_attack_class_block": "ATTACK-CLASSES.md#Access control",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-1",
+    "reviewed_paths": [
+      "supabase/schema.sql",
+      "src/utils/supabase/client.ts"
+    ],
+    "local_checks": [
+      {
+        "agent_id": "hunter-1",
+        "reviewed_paths": [
+          "supabase/schema.sql",
+          "src/utils/supabase/client.ts"
+        ],
+        "invariant": "Database tables must enforce Row Level Security against direct PostgREST anon queries.",
+        "method": "source",
+        "result": "schema.sql explicitly disables RLS across all application tables.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [
+      "FPT-SUPABASE-RLS-001"
+    ],
+    "unresolved": []
+  }
+]

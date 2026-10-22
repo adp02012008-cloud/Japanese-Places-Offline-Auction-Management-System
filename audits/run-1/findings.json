@@ -1,0 +1,376 @@
+[
+  {
+    "verdict": "needs_validation",
+    "fingerprint": "FPT-AUCTION-RACE-001",
+    "title": "Non-Atomic Budget Check in Offline Sale Confirmation",
+    "description": "The confirmOfflineSale service executes budget adequacy verification and balance updates in sequential queries without atomic database locking or transaction wrapping.",
+    "claimed_root_cause": "src/lib/services/auctionService.ts reads team.remaining_budget in memory, verifies remainingBudget >= finalPurchasePrice, and updates remaining_budget in a separate subsequent query without an atomic database transaction or PostgreSQL CHECK constraint.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/lib/services/auctionService.ts",
+        "line": 23,
+        "scope": "confirmOfflineSale",
+        "description": "Begins sale confirmation with requested price."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/lib/services/auctionService.ts",
+        "line": 76,
+        "scope": "confirmOfflineSale",
+        "description": "Fetches team remaining budget and checks remainingBudget >= finalPurchasePrice."
+      },
+      {
+        "kind": "sink",
+        "file": "src/lib/services/auctionService.ts",
+        "line": 131,
+        "scope": "confirmOfflineSale",
+        "description": "Updates team budget in separate subsequent query."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/lib/services/auctionService.ts",
+        "line": 76,
+        "description": "const remainingBudget = Number(team.remaining_budget); if (remainingBudget < finalPurchasePrice) throw Error;"
+      },
+      {
+        "file": "src/lib/services/auctionService.ts",
+        "line": 131,
+        "description": "await supabase.from('teams').update({ remaining_budget: newRemaining }).eq('id', team.id);"
+      }
+    ],
+    "blockers": [
+      "In an offline live auction event, a single human auctioneer typically operates the console. Determining whether multi-operator concurrency or automated bidding bots can invoke the endpoint simultaneously requires operational validation."
+    ],
+    "validation_plan": {
+      "local": "Simulate concurrent POST /api/admin/sales requests using a parallel test script to observe whether team remaining budget drops below zero.",
+      "deployment": "Inspect Supabase PostgreSQL schema in production to verify if an integrity constraint CHECK (remaining_budget >= 0) is active."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "FPT-AUTH-BRUTEFORCE-001",
+    "title": "Missing Rate Limiting on Login Endpoint Allows Credential Brute-Forcing",
+    "description": "The authentication endpoint /api/auth/login does not enforce rate limiting or account lockout, allowing automated brute-force attacks against user and admin passwords.",
+    "root_cause": "POST handler in src/app/api/auth/login/route.ts validates credentials against database records without tracking failed attempts, applying IP throttling, or enforcing progressive backoff delays.",
+    "intended_behavior": "Authentication attempts should be throttled using sliding-window rate limiting or backoff after repeated failed attempts to prevent automated credential guessing.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/app/api/auth/login/route.ts",
+        "line": 6,
+        "scope": "POST",
+        "description": "Public authentication endpoint receives username and password payload without rate limit checks."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/app/api/auth/login/route.ts",
+        "line": 68,
+        "scope": "POST",
+        "description": "Password verification is performed with Argon2id/scrypt without recording failed attempt telemetry."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/auth/login/route.ts",
+        "line": 91,
+        "scope": "POST",
+        "description": "Returns 401 error immediately without throttling subsequent requests from the same client."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/app/api/auth/login/route.ts",
+        "line": 6,
+        "description": "The POST function lacks any rate limiting middleware or Redis/in-memory rate limiter calls."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "network_routing",
+        "description": "Attacker has network access to the /api/auth/login route."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An unauthenticated remote attacker submits continuous credential guessing requests to /api/auth/login.",
+      "payloads": [
+        "POST /api/auth/login {\"username\":\"team1\",\"password\":\"Team@000001\"}",
+        "POST /api/auth/login {\"username\":\"team1\",\"password\":\"Team@000002\"}"
+      ],
+      "instructions": [
+        "Send consecutive POST requests with candidate passwords to /api/auth/login in rapid succession.",
+        "Observe that the server accepts every attempt without HTTP 429 status or delay."
+      ],
+      "observed_result": "Server repeatedly processes and rejects invalid attempts at full network throughput without rate enforcement."
+    },
+    "remediation": {
+      "strategy": "Implement IP and account based sliding-window rate limiting on /api/auth/login returning HTTP 429 after 5 failed attempts within 5 minutes.",
+      "code_changes": [
+        {
+          "file_name": "src/app/api/auth/login/route.ts",
+          "fixed_code": "// Add rate limiting check before verifying credentials\n// Return NextResponse.json({ error: 'Too many login attempts. Please try again later.' }, { status: 429 });"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "The login endpoint is publicly reachable and short temporary passwords have a finite search space."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Successful brute force provides unauthorized access to a team account dashboard or admin console."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed by static analysis of route handler lacking any rate limiting logic."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "FPT-AUTH-JWT-SECRET-001",
+    "title": "Predictable Fallback Secret Allows Remote JWT Session Forgery",
+    "description": "The session authentication layer uses a static, hardcoded fallback string when the AUTH_SECRET environment variable is unset, allowing unauthorized parties to forge arbitrary administrative or team tokens.",
+    "root_cause": "src/lib/auth/session.ts sets JWT_SECRET using a hardcoded fallback string 'japanese_places_auction_default_secret_fallback_key_2026' if process.env.AUTH_SECRET is empty.",
+    "intended_behavior": "The application must strictly mandate a secure AUTH_SECRET in production and throw a startup configuration error if absent.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/lib/auth/session.ts",
+        "line": 6,
+        "scope": "JWT_SECRET",
+        "description": "JWT_SECRET is derived from process.env.AUTH_SECRET with an insecure hardcoded fallback string."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/lib/auth/session.ts",
+        "line": 48,
+        "scope": "verifySessionToken",
+        "description": "Incoming cookies are validated against the derived JWT_SECRET."
+      },
+      {
+        "kind": "sink",
+        "file": "src/lib/auth/rbac.ts",
+        "line": 18,
+        "scope": "requireAdmin",
+        "description": "Admit requests as Administrator if the forged session claims role ADMIN."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/lib/auth/session.ts",
+        "line": 7,
+        "description": "Hardcoded secret string 'japanese_places_auction_default_secret_fallback_key_2026' present in source code."
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "system_configuration",
+        "description": "AUTH_SECRET environment variable is missing from hosting provider configuration."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An attacker creates a signed JWT token using the known fallback secret and places it in the ja_session_token cookie.",
+      "payloads": [
+        "SignJWT({ role: 'ADMIN', username: 'admin' }).sign('japanese_places_auction_default_secret_fallback_key_2026')"
+      ],
+      "instructions": [
+        "Generate a JWT signed with the hardcoded fallback secret containing role ADMIN.",
+        "Send an HTTP request to /api/admin/places with Cookie: ja_session_token=<forged_token>.",
+        "Observe successful authorization."
+      ],
+      "observed_result": "The server accepts the forged JWT and grants unrestricted administrative privileges."
+    },
+    "remediation": {
+      "strategy": "Disallow fallback secret in production. Throw fatal Error on server startup if process.env.AUTH_SECRET is undefined or shorter than 32 characters.",
+      "code_changes": [
+        {
+          "file_name": "src/lib/auth/session.ts",
+          "fixed_code": "const secret = process.env.AUTH_SECRET;\nif (!secret && process.env.NODE_ENV === 'production') {\n  throw new Error('FATAL: AUTH_SECRET must be configured in production!');\n}\nconst JWT_SECRET = new TextEncoder().encode(secret || 'dev_secret_only_local_dev_32_chars_min');"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Unset environment variables are common during deployment migrations and fallback string is visible in open repositories."
+      },
+      "impact": {
+        "score": "critical",
+        "reason": "Complete administrative takeover of the auction management system and team balances."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed directly from source code constant definition in session.ts."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "FPT-AUTH-PW-SALT-001",
+    "title": "Static Salt in Scrypt Password Hash Fallback Weakens Credential Protection",
+    "description": "The password hashing fallback function uses a hardcoded, static salt string for scrypt, allowing precomputed dictionary and rainbow table attacks against stored password hashes.",
+    "root_cause": "src/lib/auth/session.ts uses 'ja_salt_2026' as a fixed salt string for scryptSync when native Argon2id module is unavailable.",
+    "intended_behavior": "Password hashing must generate a unique, cryptographically random salt for each password and store the salt alongside the hash in a secure standard format.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/lib/auth/session.ts",
+        "line": 11,
+        "scope": "hashPassword",
+        "description": "Password string is received for hashing."
+      },
+      {
+        "kind": "propagation",
+        "file": "src/lib/auth/session.ts",
+        "line": 23,
+        "scope": "hashPassword",
+        "description": "scryptSync executes using fixed static string 'ja_salt_2026' rather than a per-user random salt."
+      },
+      {
+        "kind": "sink",
+        "file": "src/app/api/registration/route.ts",
+        "line": 133,
+        "scope": "POST",
+        "description": "Unsalted hash is stored in database password_hash column."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "src/lib/auth/session.ts",
+        "line": 23,
+        "description": "crypto.scryptSync(plainText, 'ja_salt_2026', 64).toString('hex')"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "third_party_dependency",
+        "description": "The native @node-rs/argon2 binary fails to load in serverless edge container environments."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An attacker with access to exported database records precomputes hashes using the known static salt.",
+      "payloads": [
+        "scryptSync(candidate, 'ja_salt_2026', 64)"
+      ],
+      "instructions": [
+        "Extract password hash from teams or admins table.",
+        "Compute rainbow table or dictionary lookup using fixed salt ja_salt_2026.",
+        "Observe identical hashes generated for identical passwords across different accounts."
+      ],
+      "observed_result": "Identical passwords generate identical hashes across all accounts due to static salt reuse."
+    },
+    "remediation": {
+      "strategy": "Generate a 16-byte random salt using crypto.randomBytes(16) for each hash, and serialize as salt:hash for verification.",
+      "code_changes": [
+        {
+          "file_name": "src/lib/auth/session.ts",
+          "fixed_code": "const salt = crypto.randomBytes(16).toString('hex');\nconst hash = crypto.scryptSync(plainText, salt, 64).toString('hex');\nreturn `${salt}:${hash}`;"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "low",
+        "reason": "Requires database compromise or leak and fallback path activation."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Bulk offline cracking of team and admin passwords across the entire user base."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed by inspection of the scryptSync fallback invocation."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "FPT-SUPABASE-RLS-001",
+    "title": "Disabled Row Level Security Exposes Confidential Valuations via PostgREST",
+    "description": "Supabase PostgreSQL tables have Row Level Security explicitly disabled, allowing any client with the public publishable anon key to bypass backend API projections and query confidential actual_worth columns directly.",
+    "root_cause": "supabase/schema.sql contains 'ALTER TABLE public.places DISABLE ROW LEVEL SECURITY' and 'ALTER TABLE public.admins DISABLE ROW LEVEL SECURITY'. Combined with NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY exposure in the frontend bundle, Supabase PostgREST allows unrestricted client read/write access.",
+    "intended_behavior": "All tables must have Row Level Security enabled. PostgREST public access to sensitive columns and administrative tables must be rejected by default, with operations restricted to the server-side service role.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "src/utils/supabase/client.ts",
+        "line": 4,
+        "scope": "createClient",
+        "description": "Public client bundle is initialized with NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+      },
+      {
+        "kind": "propagation",
+        "file": "supabase/schema.sql",
+        "line": 131,
+        "scope": "Schema definition",
+        "description": "Row Level Security is explicitly disabled on public.places."
+      },
+      {
+        "kind": "sink",
+        "file": "supabase/schema.sql",
+        "line": 48,
+        "scope": "places table",
+        "description": "Confidential column actual_worth is readable by any client querying Supabase PostgREST."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "supabase/schema.sql",
+        "line": 131,
+        "description": "ALTER TABLE public.places DISABLE ROW LEVEL SECURITY;"
+      },
+      {
+        "file": "supabase/schema.sql",
+        "line": 135,
+        "description": "ALTER TABLE public.admins DISABLE ROW LEVEL SECURITY;"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "system_configuration",
+        "description": "Supabase PostgREST is publicly accessible at the project URL with the anon key."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "An unauthenticated user or competing team queries the Supabase PostgREST endpoint directly using the browser anon key.",
+      "payloads": [
+        "GET https://<project>.supabase.co/rest/v1/places?select=place_name,actual_worth HTTP/1.1\napikey: <NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY>"
+      ],
+      "instructions": [
+        "Extract the Supabase project URL and anon publishable key from the website bundle.",
+        "Perform a GET request to /rest/v1/places?select=place_name,actual_worth with the apikey header.",
+        "Observe the unredacted actual_worth values for all landmarks before auction bidding starts."
+      ],
+      "observed_result": "Supabase PostgREST returns unredacted confidential actual_worth values for all auction lots, subverting the core auction game mechanics."
+    },
+    "remediation": {
+      "strategy": "Enable Row Level Security on all Supabase tables. Revoke direct anon role permissions on places.actual_worth and admins table, requiring all database mutations to go through server API routes with service role credentials.",
+      "code_changes": [
+        {
+          "file_name": "supabase/schema.sql",
+          "fixed_code": "ALTER TABLE public.places ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;\nALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;\n-- Create restrictive RLS policies preventing anon access to confidential columns"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "Any user can open browser developer tools to view the Supabase public key and send HTTP requests directly to PostgREST."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Completely subverts auction integrity by leaking confidential hidden valuations to competing teams."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Confirmed by explicit DISABLE ROW LEVEL SECURITY SQL statements in schema.sql."
+    }
+  }
+]
