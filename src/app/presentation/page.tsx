@@ -27,6 +27,7 @@ export default function PresentationPage() {
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [currency, setCurrency] = useState('₹');
   const [eventName, setEventName] = useState('Japanese Places Offline Auction 2026');
+  const [announcement, setAnnouncement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -42,6 +43,7 @@ export default function PresentationPage() {
         setTeams(data.teams || []);
         setCurrency(data.currency || '₹');
         setEventName(data.eventName || 'Japanese Places Offline Auction');
+        setAnnouncement(data.publicAnnouncement);
       }
     } catch (err) {
       console.error('Error updating presentation feed:', err);
@@ -146,6 +148,51 @@ export default function PresentationPage() {
           </Link>
         </div>
       </header>
+
+      {/* Official Ceremony Announcement Banner on Big Screen */}
+      {announcement?.isPublic && (
+        <div
+          className={`relative z-20 px-8 py-3.5 border-b backdrop-blur-md flex flex-wrap items-center justify-between gap-4 shadow-2xl transition-all animate-in slide-in-from-top-4 duration-500 ${
+            announcement.noPositiveSavings
+              ? 'bg-rose-950/85 border-rose-500/50 text-rose-200'
+              : 'bg-kiniro-950/90 border-kiniro-500/60 text-kiniro-200'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`h-9 w-9 rounded-xl flex items-center justify-center font-serif font-black text-base shadow-md ${
+                announcement.noPositiveSavings
+                  ? 'bg-rose-600 text-white shadow-rose-900/40'
+                  : 'bg-kiniro-500 text-sumi-950 shadow-kiniro-900/40'
+              }`}
+            >
+              {announcement.noPositiveSavings ? '過' : '勝'}
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wider font-semibold opacity-75">
+                Official Ceremony Announcement
+              </div>
+              <div className="font-serif font-black text-lg sm:text-xl text-white">
+                {announcement.announcementMessage}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={announcement.noPositiveSavings ? 'destructive' : 'gold'}
+              className="text-xs font-bold px-3 py-1 uppercase tracking-wide"
+            >
+              {announcement.announcementLabel}
+            </Badge>
+            <span className="font-serif font-extrabold text-white text-lg sm:text-xl">
+              {announcement.noPositiveSavings
+                ? announcement.bestPerformingTeamName
+                : announcement.winningTeamName}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main 16:9 Stage Area */}
       <main className="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 lg:p-10 items-center max-w-[1920px] mx-auto w-full">

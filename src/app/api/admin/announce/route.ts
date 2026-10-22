@@ -35,11 +35,17 @@ export async function POST(req: NextRequest) {
       affected_record_id: String(settings?.id || 'default'),
       before_value: { is_announcement_public: previousStatus },
       after_value: {
+      after_value: {
         is_announcement_public: Boolean(isAnnouncementPublic),
-        winner: resultMetrics.winner?.teamName,
+        winner: resultMetrics.winner?.teamName || null,
+        bestPerformingTeam: resultMetrics.bestPerformingTeam?.teamName || null,
+        announcementMessage: resultMetrics.announcementMessage,
+        announcementLabel: resultMetrics.announcementLabel,
       },
       reason: isAnnouncementPublic
-        ? `Officially announced winner: ${resultMetrics.winner?.teamName || 'None'}`
+        ? (resultMetrics.noPositiveSavings
+            ? `Officially announced: ${resultMetrics.announcementMessage} (${resultMetrics.announcementLabel})`
+            : `Officially announced winner: ${resultMetrics.winner?.teamName || 'None'}`)
         : 'Revoked public winner announcement',
       timestamp: new Date().toISOString(),
     });
@@ -48,6 +54,11 @@ export async function POST(req: NextRequest) {
       success: true,
       isAnnouncementPublic: Boolean(isAnnouncementPublic),
       winner: resultMetrics.winner,
+      bestPerformingTeam: resultMetrics.bestPerformingTeam,
+      noPositiveSavings: resultMetrics.noPositiveSavings,
+      hasBreakEvenTeam: resultMetrics.hasBreakEvenTeam,
+      announcementMessage: resultMetrics.announcementMessage,
+      announcementLabel: resultMetrics.announcementLabel,
       isTie: resultMetrics.isTie,
     });
   } catch (err) {

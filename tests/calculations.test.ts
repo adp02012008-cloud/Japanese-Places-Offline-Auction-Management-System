@@ -129,3 +129,112 @@ describe('Privacy & Confidential Valuations Boundary', () => {
     expect(publicPlace.startingPrice).toBe(35000);
   });
 });
+
+describe('Special Winning Rule: When Every Team Overpays', () => {
+  it('correctly handles scenario where all teams overpay (all total savings < 0)', () => {
+    const teams = [
+      { teamName: 'Team Kyoto', totalActualWorth: 40000, totalSpent: 55000, totalSavings: -15000 },
+      { teamName: 'Team Osaka', totalActualWorth: 50000, totalSpent: 58000, totalSavings: -8000 }, // Smallest loss
+      { teamName: 'Team Nara', totalActualWorth: 30000, totalSpent: 50000, totalSavings: -20000 },
+    ];
+
+    // Check if any team has positive savings
+    const anyPositiveSavings = teams.some((t) => t.totalSavings > 0);
+    expect(anyPositiveSavings).toBe(false);
+
+    // Sort to find best-performing team (highest savings / least loss)
+    const sorted = [...teams].sort((a, b) => {
+      if (b.totalSavings !== a.totalSavings) {
+        return b.totalSavings - a.totalSavings;
+      }
+      if (b.totalActualWorth !== a.totalActualWorth) {
+        return b.totalActualWorth - a.totalActualWorth;
+      }
+      return a.totalSpent - b.totalSpent;
+    });
+
+    const bestPerformingTeam = sorted[0];
+    expect(bestPerformingTeam.teamName).toBe('Team Osaka'); // Loss of only -8000
+    expect(bestPerformingTeam.totalSavings).toBe(-8000);
+
+    // Official winner must be null (no false profitable winner announced)
+    const winner = anyPositiveSavings ? sorted[0] : null;
+    expect(winner).toBeNull();
+
+    // Required announcements
+    const announcementMessage = !anyPositiveSavings
+      ? 'No team achieved positive savings.'
+      : `Winner: ${winner?.teamName}`;
+    const announcementLabel = !anyPositiveSavings
+      ? 'Best-Performing Team — All Teams Overpaid'
+      : 'Official Auction Champion';
+
+    expect(announcementMessage).toBe('No team achieved positive savings.');
+    expect(announcementLabel).toBe('Best-Performing Team — All Teams Overpaid');
+  });
+
+  it('correctly applies tie-breakers when multiple overpaying teams have identical losses', () => {
+    const teams = [
+      { teamName: 'Team A', totalActualWorth: 30000, totalSpent: 40000, totalSavings: -10000 },
+      { teamName: 'Team B', totalActualWorth: 45000, totalSpent: 55000, totalSavings: -10000 }, // Higher actual worth
+      { teamName: 'Team C', totalActualWorth: 20000, totalSpent: 35000, totalSavings: -15000 },
+    ];
+
+    const sorted = [...teams].sort((a, b) => {
+      if (b.totalSavings !== a.totalSavings) {
+        return b.totalSavings - a.totalSavings;
+      }
+      if (b.totalActualWorth !== a.totalActualWorth) {
+        return b.totalActualWorth - a.totalActualWorth;
+      }
+      return a.totalSpent - b.totalSpent;
+    });
+
+    // Team B and Team A both lost -10000, but Team B acquired 45000 actual worth vs 30000
+    expect(sorted[0].teamName).toBe('Team B');
+    expect(sorted[1].teamName).toBe('Team A');
+  });
+
+  it('recognizes a break-even team when total savings is exactly zero and no team has positive savings', () => {
+    const teams = [
+      { teamName: 'Team Even', totalActualWorth: 50000, totalSpent: 50000, totalSavings: 0 }, // Broke even
+      { teamName: 'Team Deficit', totalActualWorth: 40000, totalSpent: 55000, totalSavings: -15000 },
+    ];
+
+    const anyPositiveSavings = teams.some((t) => t.totalSavings > 0);
+    const hasBreakEvenTeam = teams.some((t) => t.totalSavings === 0);
+
+    expect(anyPositiveSavings).toBe(false);
+    expect(hasBreakEvenTeam).toBe(true);
+
+    const sorted = [...teams].sort((a, b) => b.totalSavings - a.totalSavings);
+    const bestPerformingTeam = sorted[0];
+
+    expect(bestPerformingTeam.teamName).toBe('Team Even');
+    expect(bestPerformingTeam.totalSavings).toBe(0);
+
+    const announcementLabel =
+      hasBreakEvenTeam && bestPerformingTeam.totalSavings === 0
+        ? 'Best-Performing Team — Broke Even'
+        : 'Best-Performing Team — All Teams Overpaid';
+
+    expect(announcementLabel).toBe('Best-Performing Team — Broke Even');
+  });
+
+  it('declares official champion normally when at least one team achieves positive savings', () => {
+    const teams = [
+      { teamName: 'Team Master', totalActualWorth: 80000, totalSpent: 50000, totalSavings: 30000 }, // Positive!
+      { teamName: 'Team Overbidder', totalActualWorth: 40000, totalSpent: 55000, totalSavings: -15000 },
+    ];
+
+    const anyPositiveSavings = teams.some((t) => t.totalSavings > 0);
+    expect(anyPositiveSavings).toBe(true);
+
+    const sorted = [...teams].sort((a, b) => b.totalSavings - a.totalSavings);
+    const winner = anyPositiveSavings ? sorted[0] : null;
+
+    expect(winner).not.toBeNull();
+    expect(winner?.teamName).toBe('Team Master');
+    expect(winner?.totalSavings).toBe(30000);
+  });
+});

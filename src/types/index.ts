@@ -120,12 +120,27 @@ export interface ITeamResult {
   remainingBudget: number;
   valueEfficiency: number | null; // null if spent is 0
   budgetUtilization: number | null;
+  savingsStatus?: 'POSITIVE' | 'BREAK_EVEN' | 'OVERPAID';
   purchasedPlaces: Array<{
     placeId: string;
     placeName: string;
     finalPrice: number;
     actualWorth?: number;
   }>;
+}
+
+export interface IEventResultsResponse {
+  results: ITeamResult[];
+  activeRule: WinningRule;
+  currency: string;
+  startingBudget: number;
+  winner: ITeamResult | null;
+  bestPerformingTeam: ITeamResult | null;
+  noPositiveSavings: boolean;
+  hasBreakEvenTeam: boolean;
+  announcementMessage: string;
+  announcementLabel: string;
+  isTie: boolean;
 }
 
 export interface AuthSession {

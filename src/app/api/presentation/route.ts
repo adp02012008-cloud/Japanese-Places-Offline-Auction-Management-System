@@ -46,12 +46,29 @@ export async function GET() {
       startingBudget: Number(t.starting_budget),
     }));
 
+    let publicAnnouncement = null;
+    if (settings?.is_announcement_public) {
+      const { calculateEventResults } = await import('@/lib/services/calculationEngine');
+      const results = await calculateEventResults();
+      publicAnnouncement = {
+        isPublic: true,
+        noPositiveSavings: results.noPositiveSavings,
+        hasBreakEvenTeam: results.hasBreakEvenTeam,
+        announcementMessage: results.announcementMessage,
+        announcementLabel: results.announcementLabel,
+        winningTeamName: results.winner?.teamName || null,
+        bestPerformingTeamName: results.bestPerformingTeam?.teamName || null,
+        placesPurchased: (results.winner || results.bestPerformingTeam)?.placesPurchased || 0,
+      };
+    }
+
     return NextResponse.json({
       success: true,
       eventName,
       currency,
       places: mappedPlaces,
       teams: mappedTeams,
+      publicAnnouncement,
     });
   } catch (err) {
     console.error('Error fetching presentation data:', err);

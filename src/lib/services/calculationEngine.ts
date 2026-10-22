@@ -63,6 +63,9 @@ export async function calculateEventResults(): Promise<{
     const budgetUtilization =
       startingBudget > 0 ? Number(((totalSpent / startingBudget) * 100).toFixed(2)) : null;
 
+    const savingsStatus =
+      totalSavings > 0 ? 'POSITIVE' : totalSavings === 0 ? 'BREAK_EVEN' : 'OVERPAID';
+
     return {
       teamId: teamIdStr,
       teamName: team.team_name,
@@ -73,6 +76,7 @@ export async function calculateEventResults(): Promise<{
       remainingBudget,
       valueEfficiency,
       budgetUtilization,
+      savingsStatus,
       purchasedPlaces: teamPurchases.map((p) => ({
         placeId: String(p.place_id),
         placeName: p.place_name,
@@ -124,8 +128,10 @@ export async function calculateEventResults(): Promise<{
     rank: idx + 1,
   }));
 
-  const winner = rankedResults.length > 0 ? rankedResults[0] : null;
+  // Best-performing team based on ranked sorting
+  const bestPerformingTeam = rankedResults.length > 0 ? rankedResults[0] : null;
 
+  // Determine tie-breaker status for the top position
   let isTie = false;
   if (rankedResults.length >= 2) {
     const first = rankedResults[0];
@@ -139,12 +145,64 @@ export async function calculateEventResults(): Promise<{
     }
   }
 
+  // Savings condition analysis
+  const anyPositiveSavings = rankedResults.some((t) => t.totalSavings > 0);
+  const noPositiveSavings = rankedResults.length > 0 && !anyPositiveSavings;
+  const hasBreakEvenTeam = rankedResults.some((t) => t.totalSavings === 0);
+
+  let winner: ITeamResult | null = null;
+  let announcementLabel = '';
+  let announcementMessage = '';
+
+  if (activeRule === 'SAVINGS') {
+    if (anyPositiveSavings) {
+      // Official winner with positive savings
+      winner = rankedResults[0];
+      announcementLabel = isTie ? 'Declared Official Tie' : 'Official Auction Champion';
+      announcementMessage = `Winner: ${winner.teamName} achieved positive savings of ${currency}${winner.totalSavings.toLocaleString()}.`;
+    } else {
+      // SPECIAL WINNING RULE: WHEN EVERY TEAM OVERPAYS
+      // Do not falsely announce a profitable winner!
+      winner = null;
+      announcementMessage = 'No team achieved positive savings.';
+
+      if (hasBreakEvenTeam && bestPerformingTeam?.totalSavings === 0) {
+        announcementLabel = isTie
+          ? 'Best-Performing Team (Tie) — Broke Even'
+          : 'Best-Performing Team — Broke Even';
+      } else {
+        announcementLabel = isTie
+          ? 'Best-Performing Team (Tie) — All Teams Overpaid'
+          : 'Best-Performing Team — All Teams Overpaid';
+      }
+    }
+  } else {
+    // Configurable alternative rules (EFFICIENCY, ACTUAL_WORTH)
+    winner = rankedResults.length > 0 ? rankedResults[0] : null;
+    if (noPositiveSavings) {
+      announcementMessage = 'No team achieved positive savings.';
+      announcementLabel = isTie
+        ? `Best-Performing Team (Tie, ${activeRule}) — All Teams Overpaid`
+        : `Best-Performing Team (${activeRule}) — All Teams Overpaid`;
+    } else {
+      announcementLabel = isTie
+        ? 'Declared Official Tie'
+        : `Official Auction Champion (${activeRule})`;
+      announcementMessage = `Official Winner: ${winner?.teamName}`;
+    }
+  }
+
   return {
     results: rankedResults,
     activeRule,
     currency,
     startingBudget,
     winner,
+    bestPerformingTeam,
+    noPositiveSavings,
+    hasBreakEvenTeam,
+    announcementMessage,
+    announcementLabel,
     isTie,
   };
 }
