@@ -124,3 +124,13 @@ CREATE TABLE IF NOT EXISTS public.admins (
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('japanese-places', 'japanese-places', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- 9. Disable RLS for offline management system tables
+ALTER TABLE public.teams DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.places DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.purchases DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admins DISABLE ROW LEVEL SECURITY;
+
