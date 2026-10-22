@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import SakuraPetalsCanvas from '@/components/SakuraPetalsCanvas';
+import Japanese3DAtmosphere from '@/components/Japanese3DAtmosphere';
 import { formatCurrency } from '@/lib/utils';
 import { IPlace } from '@/types';
 
@@ -105,11 +105,24 @@ export default function HomePage() {
     }
   };
 
+  const [mouseTilt, setMouseTilt] = useState({ x: 0, y: 0 });
+
+  const handleHeroMouseMove = (e: React.MouseEvent) => {
+    if (typeof window === 'undefined') return;
+    const { clientX, clientY } = e;
+    const x = (clientX / window.innerWidth - 0.5) * 12; // -6deg to +6deg
+    const y = (clientY / window.innerHeight - 0.5) * -12;
+    setMouseTilt({ x, y });
+  };
+
   const displayedCatalogue = places.length > 0 ? places : (SHOWCASE_LANDMARKS as any);
 
   return (
-    <div className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white">
-      {/* 1. Cinematic Japanese Video Background Layer */}
+    <div
+      onMouseMove={handleHeroMouseMove}
+      className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white"
+    >
+      {/* 1. Cinematic Japanese Video Background Layer (Vivid & Dynamic) */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <video
           ref={videoRef}
@@ -118,9 +131,9 @@ export default function HomePage() {
           loop
           playsInline
           poster="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop"
-          className="h-full w-full object-cover scale-105 opacity-30 filter saturate-150 contrast-125 transition-opacity duration-1000"
+          className="h-full w-full object-cover scale-105 opacity-65 filter saturate-150 contrast-115 brightness-105 transition-opacity duration-1000"
         >
-          {/* High-quality Japanese atmospheric scenery videos */}
+          {/* High-definition vibrant Japanese atmospheric video loop */}
           <source
             src="https://assets.mixkit.co/videos/preview/mixkit-traditional-japanese-garden-and-pagoda-42654-large.mp4"
             type="video/mp4"
@@ -131,20 +144,20 @@ export default function HomePage() {
           />
         </video>
 
-        {/* Ambient Dark Gradient Vignettes */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#07070a]/90 via-[#07070a]/60 to-[#07070a] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#07070a]/80 via-transparent to-[#07070a]/80 pointer-events-none" />
+        {/* Dynamic Japanese Sun & Torii Crimson Halo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-gradient-to-b from-torii-600/40 via-rose-600/25 to-transparent blur-[130px] pointer-events-none animate-pulse" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[380px] h-[380px] rounded-full bg-gradient-to-tr from-torii-500/50 to-kiniro-500/30 blur-[75px] pointer-events-none" />
+
+        {/* Ambient Dark Gradient Vignettes for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07070a]/75 via-[#07070a]/40 to-[#07070a]/95 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#07070a]/70 via-transparent to-[#07070a]/70 pointer-events-none" />
 
         {/* Japanese Asanoha Geometric Pattern Overlay */}
-        <div className="absolute inset-0 bg-japanese-pattern opacity-15 pointer-events-none" />
-
-        {/* Glowing Japanese Ambient Orbs */}
-        <div className="absolute top-1/4 left-1/3 w-[600px] h-[600px] rounded-full bg-torii-600/15 blur-[160px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-kiniro-500/15 blur-[150px] pointer-events-none" />
+        <div className="absolute inset-0 bg-japanese-pattern opacity-20 pointer-events-none" />
       </div>
 
-      {/* 2. Interactive Falling Sakura Blossom Petals (60FPS Canvas Animation) */}
-      <SakuraPetalsCanvas />
+      {/* 2. Interactive 3D Japanese Atmosphere: 3D Lanterns, Golden Embers & Parallax Petals */}
+      <Japanese3DAtmosphere />
 
       {/* 3. Decorative Vertical Japanese Calligraphy Sidebars */}
       <div className="hidden 2xl:flex fixed left-6 top-1/3 z-20 flex-col items-center space-y-4 pointer-events-none select-none opacity-40">
@@ -217,7 +230,7 @@ export default function HomePage() {
       </header>
 
       {/* 5. Main Hero Section with Dynamic Calligraphy Banner */}
-      <main className="relative z-20 container mx-auto px-6 py-12 lg:py-20 flex-1 flex flex-col items-center justify-center text-center">
+      <main className="relative z-20 container mx-auto px-6 py-12 lg:py-20 flex-1 flex flex-col items-center justify-center text-center [perspective:1200px]">
         {/* Floating Tag */}
         <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-torii-950/80 via-sumi-900/90 to-kiniro-950/80 border border-torii-500/40 text-torii-300 text-xs sm:text-sm font-semibold tracking-wide shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-700">
           <Sparkles className="h-4 w-4 text-kiniro-400 animate-spin" />
@@ -225,8 +238,15 @@ export default function HomePage() {
           <span className="hidden sm:inline text-kiniro-400 font-serif">競売開催</span>
         </div>
 
-        {/* Hero Title */}
-        <div className="max-w-4xl space-y-6 mt-6">
+        {/* Hero Title with 3D Holographic Perspective Tilt */}
+        <div
+          style={{
+            transform: `perspective(1000px) rotateY(${mouseTilt.x}deg) rotateX(${mouseTilt.y}deg)`,
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.12s ease-out',
+          }}
+          className="max-w-4xl space-y-6 mt-6"
+        >
           <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.15] drop-shadow-2xl">
             Acquire Iconic <br className="hidden sm:inline" />
             <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-torii-500 via-rose-400 to-kiniro-400">
