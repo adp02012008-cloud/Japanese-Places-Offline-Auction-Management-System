@@ -1,17 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-import { ITeamResult, WinningRule } from '@/types';
+import { ITeamResult, WinningRule, IEventResultsResponse } from '@/types';
 
 /**
  * Computes authoritative rankings and metrics directly from Supabase purchase records.
  */
-export async function calculateEventResults(): Promise<{
-  results: ITeamResult[];
-  activeRule: WinningRule;
-  currency: string;
-  startingBudget: number;
-  winner: ITeamResult | null;
-  isTie: boolean;
-}> {
+export async function calculateEventResults(): Promise<IEventResultsResponse> {
   const supabase = getSupabaseAdmin();
 
   // 1. Fetch settings

@@ -37,7 +37,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
-  realtime: { createWebSocket: () => null as any },
 });
 
 const INITIAL_LANDMARKS = [

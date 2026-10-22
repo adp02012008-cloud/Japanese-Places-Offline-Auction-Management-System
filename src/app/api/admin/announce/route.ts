@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
       affected_record_id: String(settings?.id || 'default'),
       before_value: { is_announcement_public: previousStatus },
       after_value: {
-      after_value: {
         is_announcement_public: Boolean(isAnnouncementPublic),
         winner: resultMetrics.winner?.teamName || null,
         bestPerformingTeam: resultMetrics.bestPerformingTeam?.teamName || null,
