@@ -263,14 +263,14 @@ export default function HomePage() {
               </Button>
             </Link>
 
-            <Link href="/admin/sales">
+            <Link href="/login">
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/20 bg-white/5 hover:bg-white/15 text-white font-medium px-6 h-14 text-base rounded-2xl backdrop-blur-md"
+                className="border-white/20 bg-white/5 hover:bg-white/15 text-white font-medium px-6 h-14 text-base rounded-2xl backdrop-blur-md transition-all hover:scale-105"
               >
-                <Gavel className="h-5 w-5 mr-2" />
-                Hammer Live Sale
+                <Users className="h-5 w-5 mr-2" />
+                Team Portal Login
               </Button>
             </Link>
           </div>
@@ -375,7 +375,7 @@ export default function HomePage() {
                     <div className="flex items-center justify-between pt-2 border-t border-white/10">
                       <div>
                         <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
-                          Starting Hammer
+                          Starting Price
                         </div>
                         <div className="font-serif font-black text-lg text-kiniro-400">
                           {formatCurrency(price, '₹')}
