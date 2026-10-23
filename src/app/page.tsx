@@ -27,57 +27,6 @@ import MovingPlacesBackground from '@/components/MovingPlacesBackground';
 import { formatCurrency } from '@/lib/utils';
 import { IPlace } from '@/types';
 
-const SHOWCASE_LANDMARKS = [
-  {
-    name: 'Mount Fuji',
-    kanji: '富士山',
-    tagline: 'Sacred UNESCO Summit',
-    startingPrice: 35000,
-    imageUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200&auto=format&fit=crop',
-    region: 'Honshu',
-  },
-  {
-    name: 'Fushimi Inari',
-    kanji: '伏見稲荷',
-    tagline: '10,000 Vermilion Torii Gates',
-    startingPrice: 20000,
-    imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?q=80&w=1200&auto=format&fit=crop',
-    region: 'Kyoto',
-  },
-  {
-    name: 'Kinkaku-ji',
-    kanji: '金閣寺',
-    tagline: 'Pure Gold Leaf Zen Pavilion',
-    startingPrice: 25000,
-    imageUrl: 'https://images.unsplash.com/photo-1545569341-9eb8b30979d9?q=80&w=1200&auto=format&fit=crop',
-    region: 'Kyoto',
-  },
-  {
-    name: 'Himeji Castle',
-    kanji: '姫路城',
-    tagline: 'The White Heron Fortress',
-    startingPrice: 30000,
-    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop',
-    region: 'Hyogo',
-  },
-  {
-    name: 'Miyajima Shrine',
-    kanji: '厳島神社',
-    tagline: 'Floating Torii on the Inland Sea',
-    startingPrice: 22000,
-    imageUrl: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?q=80&w=1200&auto=format&fit=crop',
-    region: 'Hiroshima',
-  },
-  {
-    name: 'Arashiyama Bamboo',
-    kanji: '嵐山竹林',
-    tagline: 'Emerald Wind Whispering Grove',
-    startingPrice: 15000,
-    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=1200&auto=format&fit=crop',
-    region: 'Kyoto',
-  },
-];
-
 export default function HomePage() {
   const [places, setPlaces] = useState<IPlace[]>([]);
   const [activeTab, setActiveTab] = useState<'all' | 'available' | 'sold'>('all');
@@ -103,7 +52,7 @@ export default function HomePage() {
     setMouseTilt({ x, y });
   };
 
-  const displayedCatalogue = places.length > 0 ? places : (SHOWCASE_LANDMARKS as any);
+  const displayedCatalogue = places;
 
   return (
     <div
@@ -111,7 +60,7 @@ export default function HomePage() {
       className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white"
     >
       {/* 1. Cinematic Moving Japanese Places Background */}
-      <MovingPlacesBackground />
+      <MovingPlacesBackground places={places} />
 
       {/* 2. Interactive 3D Japanese Atmosphere: 3D Lanterns, Golden Embers & Parallax Petals */}
       <Japanese3DAtmosphere />
@@ -256,7 +205,9 @@ export default function HomePage() {
 
           <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
             <div className="text-xs text-torii-400 uppercase tracking-widest font-mono">Historic Relics</div>
-            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">10 Places</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">
+              {places.length > 0 ? `${places.length} Places` : '0 Places'}
+            </div>
             <div className="text-[11px] text-sumi-300 mt-0.5">Iconic Japanese landmarks</div>
           </div>
 
@@ -292,80 +243,101 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Landmark Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayedCatalogue.slice(0, 6).map((item: any, idx: number) => {
-              const name = item.placeName || item.name;
-              const price = item.startingPrice || 25000;
-              const img = item.imageUrl || item.image_url;
-              const status = item.status || 'NOT_SOLD';
-              const winningTeam = item.winningTeamName;
+          {/* Landmark Cards Grid or Clean Empty State */}
+          {displayedCatalogue.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedCatalogue.slice(0, 6).map((item: any, idx: number) => {
+                const name = item.placeName || item.name;
+                const price = item.startingPrice || 25000;
+                const img = item.imageUrl || item.image_url;
+                const status = item.status || 'NOT_SOLD';
+                const winningTeam = item.winningTeamName;
 
-              return (
-                <div
-                  key={idx}
-                  className="group relative rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-md overflow-hidden hover:border-torii-500/60 transition-all duration-500 hover:shadow-2xl hover:shadow-torii-900/30 flex flex-col justify-between"
-                >
-                  {/* Landmark Photo with Vignette */}
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/60">
-                    <img
-                      src={img}
-                      alt={name}
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-black/30 to-transparent" />
+                return (
+                  <div
+                    key={idx}
+                    className="group relative rounded-2xl border border-white/15 bg-white/[0.03] backdrop-blur-md overflow-hidden hover:border-torii-500/60 transition-all duration-500 hover:shadow-2xl hover:shadow-torii-900/30 flex flex-col justify-between"
+                  >
+                    {/* Landmark Photo with Vignette */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/60">
+                      <img
+                        src={img}
+                        alt={name}
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#07070a] via-black/30 to-transparent" />
 
-                    {/* Status Badge */}
-                    <div className="absolute top-3 right-3">
-                      <Badge
-                        variant={status === 'SOLD' ? 'sold' : 'available'}
-                        className="text-[11px] px-2.5 py-0.5 font-bold uppercase tracking-wider shadow-md"
-                      >
-                        {status === 'SOLD' ? `Sold to ${winningTeam || 'Team'}` : 'Available'}
-                      </Badge>
+                      {/* Status Badge */}
+                      <div className="absolute top-3 right-3">
+                        <Badge
+                          variant={status === 'SOLD' ? 'sold' : 'available'}
+                          className="text-[11px] px-2.5 py-0.5 font-bold uppercase tracking-wider shadow-md"
+                        >
+                          {status === 'SOLD' ? `Sold to ${winningTeam || 'Team'}` : 'Available'}
+                        </Badge>
+                      </div>
+
+                      {/* Japanese Kanji Crest Stamp in corner */}
+                      <div className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/15 text-kiniro-400 font-serif font-black flex items-center justify-center text-xs">
+                        {idx + 1}
+                      </div>
                     </div>
 
-                    {/* Japanese Kanji Crest Stamp in corner */}
-                    <div className="absolute top-3 left-3 h-8 w-8 rounded-lg bg-black/60 backdrop-blur-sm border border-white/15 text-kiniro-400 font-serif font-black flex items-center justify-center text-xs">
-                      {idx + 1}
-                    </div>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="p-5 space-y-3">
-                    <div>
-                      <h3 className="font-serif text-xl font-bold text-white group-hover:text-kiniro-300 transition-colors">
-                        {name}
-                      </h3>
-                      <p className="text-xs text-sumi-300 line-clamp-2 mt-1">
-                        {item.description || item.tagline || 'Sacred historic landmark available for offline bidding.'}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                    {/* Card Body */}
+                    <div className="p-5 space-y-3">
                       <div>
-                        <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
-                          Starting Price
-                        </div>
-                        <div className="font-serif font-black text-lg text-kiniro-400">
-                          {formatCurrency(price, '₹')}
-                        </div>
+                        <h3 className="font-serif text-xl font-bold text-white group-hover:text-kiniro-300 transition-colors">
+                          {name}
+                        </h3>
+                        <p className="text-xs text-sumi-300 line-clamp-2 mt-1">
+                          {item.description || item.tagline || 'Sacred historic landmark available for offline bidding.'}
+                        </p>
                       </div>
 
-                      <div className="text-right">
-                        <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
-                          Valuation
+                      <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                        <div>
+                          <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
+                            Starting Price
+                          </div>
+                          <div className="font-serif font-black text-lg text-kiniro-400">
+                            {formatCurrency(price, '₹')}
+                          </div>
                         </div>
-                        <div className="text-xs text-sumi-300 font-mono italic">
-                          🔒 Confidential
+
+                        <div className="text-right">
+                          <div className="text-[10px] text-sumi-400 uppercase tracking-wider font-semibold">
+                            Valuation
+                          </div>
+                          <div className="text-xs text-sumi-300 font-mono italic">
+                            🔒 Confidential
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center space-y-4">
+              <div className="h-14 w-14 rounded-2xl bg-torii-600/20 text-torii-400 border border-torii-500/30 flex items-center justify-center mx-auto shadow-glow-torii">
+                <Landmark className="h-7 w-7" />
+              </div>
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-white">
+                No Japanese Places Currently Listed
+              </h3>
+              <p className="text-sm text-sumi-300 max-w-lg mx-auto leading-relaxed">
+                The auction catalogue is cleared and ready for new items. Administrators can add Japanese places with starting hammer prices and confidential actual valuations in the Admin Console.
+              </p>
+              <div className="pt-2">
+                <Link href="/admin/places">
+                  <Button size="sm" className="bg-gradient-to-r from-torii-600 to-rose-600 hover:from-torii-500 hover:to-rose-500 text-white font-semibold shadow-glow-torii">
+                    Manage Places in Admin Console
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 8. Architectural Features & Japanese Bidding Rules Bento Grid */}

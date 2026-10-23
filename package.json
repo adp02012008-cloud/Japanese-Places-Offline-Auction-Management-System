@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
+    "clear-data": "tsx scripts/clear_all_data.ts",
     "test": "vitest run"
   },
   "dependencies": {

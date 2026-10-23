@@ -275,7 +275,7 @@ export default function AdminPlacesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {places.length === 0 ? (
           <div className="col-span-full py-16 text-center text-sumi-400">
-            {loading ? 'Loading Japanese places...' : 'No places found. Click "Add Japanese Place" or run seed script.'}
+            {loading ? 'Loading Japanese places...' : 'No places found. Click "Add Japanese Place" to register an auction item.'}
           </div>
         ) : (
           places.map((place) => (
