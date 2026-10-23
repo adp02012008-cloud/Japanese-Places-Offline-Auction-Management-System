@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import Japanese3DAtmosphere from '@/components/Japanese3DAtmosphere';
+import MovingPlacesBackground from '@/components/MovingPlacesBackground';
 import { formatCurrency } from '@/lib/utils';
 import { IPlace } from '@/types';
 
@@ -109,26 +110,8 @@ export default function HomePage() {
       onMouseMove={handleHeroMouseMove}
       className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white"
     >
-      {/* 1. Cinematic Japanese Atmosphere Background Layer */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div
-          className="h-full w-full bg-cover bg-center scale-105 opacity-55 filter saturate-150 contrast-115 brightness-105"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop')",
-          }}
-        />
-
-        {/* Dynamic Japanese Sun & Torii Crimson Halo */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-gradient-to-b from-torii-600/40 via-rose-600/25 to-transparent blur-[130px] pointer-events-none animate-pulse" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[380px] h-[380px] rounded-full bg-gradient-to-tr from-torii-500/50 to-kiniro-500/30 blur-[75px] pointer-events-none" />
-
-        {/* Ambient Dark Gradient Vignettes for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#07070a]/75 via-[#07070a]/40 to-[#07070a]/95 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#07070a]/70 via-transparent to-[#07070a]/70 pointer-events-none" />
-
-        {/* Japanese Asanoha Geometric Pattern Overlay */}
-        <div className="absolute inset-0 bg-japanese-pattern opacity-20 pointer-events-none" />
-      </div>
+      {/* 1. Cinematic Moving Japanese Places Background */}
+      <MovingPlacesBackground />
 
       {/* 2. Interactive 3D Japanese Atmosphere: 3D Lanterns, Golden Embers & Parallax Petals */}
       <Japanese3DAtmosphere />

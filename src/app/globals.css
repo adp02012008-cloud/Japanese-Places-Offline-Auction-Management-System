@@ -148,3 +148,37 @@ html.lenis body {
 .lenis.lenis-smooth iframe {
   pointer-events: none;
 }
+
+/* Cinematic Japanese Moving Background Animations */
+@keyframes kenburns-1 {
+  0% {
+    transform: scale(1.05) translate(0%, 0%);
+  }
+  50% {
+    transform: scale(1.18) translate(-1.8%, -1.2%);
+  }
+  100% {
+    transform: scale(1.08) translate(1.4%, 0.8%);
+  }
+}
+
+@keyframes kenburns-2 {
+  0% {
+    transform: scale(1.16) translate(1.5%, 1%);
+  }
+  50% {
+    transform: scale(1.06) translate(-1.2%, 0.6%);
+  }
+  100% {
+    transform: scale(1.18) translate(0.4%, -1.6%);
+  }
+}
+
+.animate-kenburns-1 {
+  animation: kenburns-1 18s ease-in-out infinite alternate;
+}
+
+.animate-kenburns-2 {
+  animation: kenburns-2 20s ease-in-out infinite alternate;
+}
+
