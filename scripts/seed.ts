@@ -50,7 +50,7 @@ const INITIAL_LANDMARKS = [
   {
     place_name: 'Fushimi Inari Taisha (伏見稲荷大社)',
     description: 'Kyoto’s legendary Shinto shrine renowned for its mesmerizing thousands of vibrant vermilion Torii gates climbing Mount Inari.',
-    image_url: 'https://images.unsplash.com/photo-1478436127897-769e00d2c715?q=80&w=1200&auto=format&fit=crop',
+    image_url: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?q=80&w=1200&auto=format&fit=crop',
     starting_price: 20000,
     actual_worth: 50000,
   },
@@ -71,7 +71,7 @@ const INITIAL_LANDMARKS = [
   {
     place_name: 'Miyajima Itsukushima Shrine (厳島神社)',
     description: 'The iconic "Floating Torii Gate" in Hiroshima Bay appearing to drift weightlessly over the sea during high tide.',
-    image_url: 'https://images.unsplash.com/photo-1528164344705-475426879c0d?q=80&w=1200&auto=format&fit=crop',
+    image_url: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?q=80&w=1200&auto=format&fit=crop',
     starting_price: 22000,
     actual_worth: 52000,
   },

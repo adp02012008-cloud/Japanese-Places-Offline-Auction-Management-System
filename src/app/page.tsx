@@ -40,7 +40,7 @@ const SHOWCASE_LANDMARKS = [
     kanji: '伏見稲荷',
     tagline: '10,000 Vermilion Torii Gates',
     startingPrice: 20000,
-    imageUrl: 'https://images.unsplash.com/photo-1478436127897-769e00d2c715?q=80&w=1200&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?q=80&w=1200&auto=format&fit=crop',
     region: 'Kyoto',
   },
   {
@@ -64,7 +64,7 @@ const SHOWCASE_LANDMARKS = [
     kanji: '厳島神社',
     tagline: 'Floating Torii on the Inland Sea',
     startingPrice: 22000,
-    imageUrl: 'https://images.unsplash.com/photo-1528164344705-475426879c0d?q=80&w=1200&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1524413840807-0c3cb6fa808d?q=80&w=1200&auto=format&fit=crop',
     region: 'Hiroshima',
   },
   {
@@ -79,9 +79,7 @@ const SHOWCASE_LANDMARKS = [
 
 export default function HomePage() {
   const [places, setPlaces] = useState<IPlace[]>([]);
-  const [videoPlaying, setVideoPlaying] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'available' | 'sold'>('all');
-  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     fetch('/api/places')
@@ -93,17 +91,6 @@ export default function HomePage() {
       })
       .catch(() => {});
   }, []);
-
-  const toggleVideoPlayback = () => {
-    if (!videoRef.current) return;
-    if (videoPlaying) {
-      videoRef.current.pause();
-      setVideoPlaying(false);
-    } else {
-      videoRef.current.play();
-      setVideoPlaying(true);
-    }
-  };
 
   const [mouseTilt, setMouseTilt] = useState({ x: 0, y: 0 });
 
@@ -122,27 +109,14 @@ export default function HomePage() {
       onMouseMove={handleHeroMouseMove}
       className="relative min-h-screen bg-[#07070a] text-slate-100 flex flex-col justify-between overflow-x-hidden selection:bg-torii-600 selection:text-white"
     >
-      {/* 1. Cinematic Japanese Video Background Layer (Vivid & Dynamic) */}
+      {/* 1. Cinematic Japanese Atmosphere Background Layer */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop"
-          className="h-full w-full object-cover scale-105 opacity-65 filter saturate-150 contrast-115 brightness-105 transition-opacity duration-1000"
-        >
-          {/* High-definition vibrant Japanese atmospheric video loop */}
-          <source
-            src="https://assets.mixkit.co/videos/preview/mixkit-traditional-japanese-garden-and-pagoda-42654-large.mp4"
-            type="video/mp4"
-          />
-          <source
-            src="https://assets.mixkit.co/videos/preview/mixkit-cherry-blossom-flowers-in-spring-42861-large.mp4"
-            type="video/mp4"
-          />
-        </video>
+        <div
+          className="h-full w-full bg-cover bg-center scale-105 opacity-55 filter saturate-150 contrast-115 brightness-105"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1920&auto=format&fit=crop')",
+          }}
+        />
 
         {/* Dynamic Japanese Sun & Torii Crimson Halo */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-gradient-to-b from-torii-600/40 via-rose-600/25 to-transparent blur-[130px] pointer-events-none animate-pulse" />
@@ -200,13 +174,6 @@ export default function HomePage() {
 
         {/* Action Controls & Portals */}
         <div className="flex items-center space-x-3">
-          <button
-            onClick={toggleVideoPlayback}
-            title={videoPlaying ? 'Pause ambient video' : 'Play ambient video'}
-            className="hidden sm:flex h-9 w-9 rounded-xl border border-white/15 bg-white/5 hover:bg-white/15 items-center justify-center text-xs text-white transition-colors"
-          >
-            {videoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </button>
 
           <Link href="/login">
             <Button
