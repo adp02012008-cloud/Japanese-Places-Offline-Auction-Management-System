@@ -121,7 +121,7 @@ AUTH_SECRET=japanese_offline_auction_super_secret_jwt_key_2026_change_in_product
 
 # Initial Admin Credentials (used if no admin exists yet)
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=Admin@Sakura2026!
+ADMIN_PASSWORD=123
 
 # Supabase Storage (Used only for image files)
 SUPABASE_URL=https://your-project.supabase.co

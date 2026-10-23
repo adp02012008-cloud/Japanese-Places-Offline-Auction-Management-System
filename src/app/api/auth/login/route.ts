@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const { count } = await supabase.from('admins').select('*', { count: 'exact', head: true });
     if (!count || count === 0) {
       const defaultUser = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
-      const defaultPass = process.env.ADMIN_PASSWORD || 'Admin@Sakura2026!';
+      const defaultPass = process.env.ADMIN_PASSWORD || '123';
       const defaultHash = await hashPassword(defaultPass);
       await supabase.from('admins').insert({
         username: defaultUser,

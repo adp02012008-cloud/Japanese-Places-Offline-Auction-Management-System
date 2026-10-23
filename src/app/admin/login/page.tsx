@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -92,6 +92,7 @@ export default function AdminLoginPage() {
                 </Label>
                 <Input
                   id="admin-username"
+                  placeholder="Enter admin username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -114,12 +115,6 @@ export default function AdminLoginPage() {
                   disabled={loading}
                   className="bg-sumi-950 border-sumi-700 text-white focus-visible:ring-kiniro-500"
                 />
-              </div>
-
-              <div className="rounded-lg bg-sumi-950/80 p-3 border border-sumi-800 text-[11px] text-sumi-400 space-y-1">
-                <div className="text-kiniro-400 font-semibold">Initial Setup Credentials:</div>
-                <div>Username: <code className="text-sumi-200">admin</code></div>
-                <div>Password: <code className="text-sumi-200">Admin@Sakura2026!</code></div>
               </div>
             </CardContent>
 

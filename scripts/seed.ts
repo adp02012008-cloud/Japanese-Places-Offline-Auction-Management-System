@@ -135,13 +135,14 @@ async function seed() {
   console.log('🌸 Seeding Admin Account in Supabase...');
   const { data: existingAdmin } = await supabase.from('admins').select('id').eq('username', 'admin').maybeSingle();
   if (!existingAdmin) {
-    const passwordHash = await hashPassword('Admin@Sakura2026!');
+    const adminPass = process.env.ADMIN_PASSWORD || '123';
+    const passwordHash = await hashPassword(adminPass);
     await supabase.from('admins').insert({
       username: 'admin',
       password_hash: passwordHash,
       role: 'ADMIN',
     });
-    console.log('✅ Admin initialized (admin / Admin@Sakura2026!)');
+    console.log(`✅ Admin initialized (admin / ${adminPass})`);
   }
 
   // 3. Landmarks
