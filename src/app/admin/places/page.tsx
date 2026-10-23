@@ -88,8 +88,8 @@ export default function AdminPlacesPage() {
     setDescription('');
     setImageUrl('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1200&auto=format&fit=crop');
     setImageStoragePath('');
-    setStartingPrice(10000);
-    setActualWorth(25000);
+    setStartingPrice(1000000);
+    setActualWorth(2000000);
     setStatus('NOT_SOLD');
     setFormError('');
     setIsModalOpen(true);

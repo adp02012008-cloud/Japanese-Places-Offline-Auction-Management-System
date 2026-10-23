@@ -5,11 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number | null | undefined, currency: string = '₹'): string {
+export function formatCurrency(amount: number | null | undefined, currency: string = '¥'): string {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return 'N/A';
   }
-  return `${currency}${amount.toLocaleString('en-IN')}`;
+  const locale = currency === '₹' ? 'en-IN' : 'en-US';
+  return `${currency}${amount.toLocaleString(locale)}`;
 }
 
 export function formatPercentage(val: number | null | undefined): string {

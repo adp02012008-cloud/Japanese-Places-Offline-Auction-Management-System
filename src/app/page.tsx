@@ -199,7 +199,7 @@ export default function HomePage() {
         <div className="mt-14 w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-left">
           <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg">
             <div className="text-xs text-kiniro-400 uppercase tracking-widest font-mono">Equal Capital</div>
-            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">₹1,00,000</div>
+            <div className="font-serif font-black text-2xl sm:text-3xl text-white mt-1">¥20,000,000</div>
             <div className="text-[11px] text-sumi-300 mt-0.5">Starting team budget</div>
           </div>
 
@@ -300,7 +300,7 @@ export default function HomePage() {
                             Starting Price
                           </div>
                           <div className="font-serif font-black text-lg text-kiniro-400">
-                            {formatCurrency(price, '₹')}
+                            {formatCurrency(price, '¥')}
                           </div>
                         </div>
 
