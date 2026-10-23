@@ -122,3 +122,112 @@ export async function PATCH(req: NextRequest) {
     return handleAuthError(err);
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    const adminSession = await requireAdmin();
+    const supabase = getSupabaseAdmin();
+
+    const body = await req.json();
+    const { teamName, startingBudget: customBudget, captainName } = body;
+
+    const trimmedTeamName = (teamName || '').trim();
+    if (!trimmedTeamName) {
+      return NextResponse.json({ error: 'Team name is required.' }, { status: 400 });
+    }
+
+    // Check if team name already exists
+    const { data: existing } = await supabase
+      .from('teams')
+      .select('id, team_name')
+      .ilike('team_name', trimmedTeamName)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: `Team "${trimmedTeamName}" already exists.` }, { status: 400 });
+    }
+
+    // Get event default budget if not specified
+    let startingBudget = Number(customBudget);
+    if (!startingBudget || startingBudget <= 0) {
+      const { data: settings } = await supabase
+        .from('event_settings')
+        .select('starting_budget_per_team')
+        .limit(1)
+        .maybeSingle();
+      startingBudget = settings?.starting_budget_per_team ?? 100000;
+    }
+
+    const { hashPassword } = await import('@/lib/auth/session');
+    const { generateTeamUsername } = await import('@/lib/utils');
+    const defaultPassword = 'team123';
+    const passwordHash = await hashPassword(defaultPassword);
+    const username = generateTeamUsername(trimmedTeamName);
+
+    const { data: newTeam, error: teamErr } = await supabase
+      .from('teams')
+      .insert({
+        team_name: trimmedTeamName,
+        member_count: 1,
+        approval_status: 'APPROVED',
+        participation_status: 'ACTIVE',
+        starting_budget: startingBudget,
+        remaining_budget: startingBudget,
+        total_spent: 0,
+        total_actual_worth: 0,
+        username,
+        password_hash: passwordHash,
+        first_login_must_change_password: false,
+      })
+      .select()
+      .single();
+
+    if (teamErr || !newTeam) {
+      return NextResponse.json({ error: teamErr?.message || 'Failed to create team.' }, { status: 500 });
+    }
+
+    // Add primary representative member
+    const memberName = (captainName || '').trim() || `${trimmedTeamName} Representative`;
+    const enrollment = `ENR-${trimmedTeamName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)}-01`;
+    await supabase.from('team_members').insert({
+      team_id: newTeam.id,
+      full_name: memberName,
+      enrollment_number: enrollment,
+    });
+
+    // Log to audit trail
+    await supabase.from('audit_logs').insert({
+      admin_id: adminSession.userId,
+      admin_username: adminSession.username,
+      action_type: 'TEAM_CREATE_DIRECT',
+      affected_record_type: 'Team',
+      affected_record_id: String(newTeam.id),
+      after_value: {
+        team_name: newTeam.team_name,
+        username: newTeam.username,
+        starting_budget: newTeam.starting_budget,
+      },
+      reason: `Directly created team "${trimmedTeamName}" by admin`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      team: {
+        _id: String(newTeam.id),
+        teamName: newTeam.team_name,
+        approvalStatus: newTeam.approval_status,
+        participationStatus: newTeam.participation_status,
+        startingBudget: Number(newTeam.starting_budget),
+        remainingBudget: Number(newTeam.remaining_budget),
+        totalSpent: 0,
+        totalActualWorth: 0,
+        username: newTeam.username,
+        defaultPassword,
+      },
+    });
+  } catch (err) {
+    return handleAuthError(err);
+  }
+}
+

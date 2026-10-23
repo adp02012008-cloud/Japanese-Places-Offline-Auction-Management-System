@@ -13,10 +13,12 @@ import {
   RefreshCw,
   Coins,
   ShieldAlert,
+  Plus,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -40,6 +42,45 @@ export default function AdminTeamsPage() {
   const [selectedMembers, setSelectedMembers] = useState<ITeamMember[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Add Team Modal State
+  const [isAddTeamModalOpen, setIsAddTeamModalOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamBudget, setNewTeamBudget] = useState(100000);
+  const [newTeamCaptain, setNewTeamCaptain] = useState('');
+  const [addTeamLoading, setAddTeamLoading] = useState(false);
+  const [addTeamError, setAddTeamError] = useState('');
+
+  const handleAddTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeamName.trim()) return;
+    setAddTeamLoading(true);
+    setAddTeamError('');
+    try {
+      const res = await fetch('/api/admin/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamName: newTeamName.trim(),
+          startingBudget: newTeamBudget,
+          captainName: newTeamCaptain.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setAddTeamError(data.error || 'Failed to add team.');
+        return;
+      }
+      setIsAddTeamModalOpen(false);
+      setNewTeamName('');
+      setNewTeamCaptain('');
+      fetchTeams();
+    } catch (err: any) {
+      setAddTeamError(err.message || 'Error adding team.');
+    } finally {
+      setAddTeamLoading(false);
+    }
+  };
 
   const fetchTeams = async () => {
     setLoading(true);
@@ -150,6 +191,19 @@ export default function AdminTeamsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            onClick={() => {
+              setNewTeamName('');
+              setNewTeamCaptain('');
+              setAddTeamError('');
+              setIsAddTeamModalOpen(true);
+            }}
+            className="bg-torii-600 hover:bg-torii-500 text-white font-semibold shadow-glow-torii"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Team
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -384,6 +438,81 @@ export default function AdminTeamsPage() {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Team Modal */}
+      <Dialog open={isAddTeamModalOpen} onOpenChange={setIsAddTeamModalOpen}>
+        <DialogContent className="border-sumi-700 bg-sumi-900 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl font-bold text-white flex items-center gap-2">
+              <Users className="h-5 w-5 text-torii-400" />
+              Add Auction Team
+            </DialogTitle>
+            <DialogDescription className="text-sumi-300">
+              Instantly create and approve an active bidding team with default starting balance.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAddTeam} className="space-y-4 pt-2">
+            {addTeamError && (
+              <div className="p-3 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-200 text-xs flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{addTeamError}</span>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-sumi-300">Team Name *</Label>
+              <Input
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+                placeholder="e.g. Team Shogun, Team Sakura"
+                required
+                className="border-sumi-700 bg-sumi-950 text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-sumi-300">Captain / Lead Member Name (Optional)</Label>
+              <Input
+                value={newTeamCaptain}
+                onChange={(e) => setNewTeamCaptain(e.target.value)}
+                placeholder="e.g. Leader 1"
+                className="border-sumi-700 bg-sumi-950 text-white"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-sumi-300">Starting Budget (₹)</Label>
+              <Input
+                type="number"
+                value={newTeamBudget}
+                onChange={(e) => setNewTeamBudget(Number(e.target.value))}
+                min={1000}
+                required
+                className="border-sumi-700 bg-sumi-950 text-white font-mono"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddTeamModalOpen(false)}
+                className="border-sumi-700 hover:bg-sumi-800 text-sumi-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={addTeamLoading}
+                className="bg-torii-600 hover:bg-torii-500 text-white font-semibold"
+              >
+                {addTeamLoading ? 'Adding...' : 'Create & Approve Team'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
